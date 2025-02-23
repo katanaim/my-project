@@ -13,6 +13,7 @@
   padding-bottom: clamp(1.75rem, 1.1338rem + 2.6291vw, 3.5rem); 
   display: grid;
   grid-template-columns: 18vw 1fr 15vw;
+  align-items: center;
 }
 
 
@@ -389,11 +390,17 @@
 
 
 @media (max-width: 400px) {
-   .header{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    gap:20px;
+  .header__menu{
+    gap: 15px;
+  }
+
+  .header__menu-link{
+    font-size: 10px;
+  }
+
+  .logo_icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 16px;
   }
 }
