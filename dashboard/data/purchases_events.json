@@ -1,0 +1,22 @@
+{
+ "generated_at": "2026-07-22T00:00:00Z",
+ "seed": true,
+ "history_start": "2026-06-21",
+ "users": [],
+ "seed_totals": {
+  "any_buyers": 2798,
+  "onetime_buyers": 2423,
+  "sub_buyers": 595,
+  "both_buyers": 220,
+  "repeat_any": 469,
+  "repeat_onetime": 280,
+  "onetime_then_sub": 213,
+  "sub_had_prior_onetime": 212,
+  "onetime_events": 2826,
+  "sub_events": 611
+ },
+ "seed_window": {
+  "from": "2026-06-21",
+  "to": "2026-07-20"
+ }
+}

@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overchat · Дневной монитор воронки</title>
+<style>
+  :root{
+    --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC; --grid:#EDEEE9;
+    --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
+    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --amber-line:#D97706;
+    --band:#B4530910; --good:#15803D;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30; --grid:#262D33;
+    --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
+    --band:#E8A33D14; --good:#4ADE80;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--surface); color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px; margin:0 auto; padding:40px 22px 64px; display:flex; flex-direction:column; gap:26px}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:30px; margin:6px 0 0; letter-spacing:-.01em}
+  .sub{color:var(--ink-2); margin-top:7px; max-width:70ch}
+  .stamp{font-size:12px; color:var(--ink-3); margin-top:5px}
+  .num{font-variant-numeric:tabular-nums}
+  .controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--card);
+    border:1px solid var(--border); border-radius:12px; padding:10px 14px; position:sticky; top:8px; z-index:5}
+  .controls label{font-size:12.5px; color:var(--ink-2); display:flex; gap:6px; align-items:center}
+  .controls input[type=date]{font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface);
+    border:1px solid var(--border); border-radius:7px; padding:4px 7px}
+  .chip{font:inherit; font-size:12px; font-weight:600; color:var(--ink-2); background:var(--surface);
+    border:1px solid var(--border); border-radius:99px; padding:4px 11px; cursor:pointer}
+  .chip:hover{color:var(--ink)}
+  .chip.on{color:var(--surface); background:var(--ink); border-color:var(--ink)}
+  .controls .days{margin-left:auto; font-size:12px; color:var(--ink-3)}
+  .alert{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:14px 18px}
+  .alert h3{margin:0 0 3px; font-size:14px; color:var(--amber)}
+  .alert p{margin:0; font-size:13.5px; color:var(--ink-2)}
+  .alert b{color:var(--ink)}
+  .err{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:14px 18px; font-size:13.5px; color:var(--ink-2)}
+  .block{display:flex; flex-direction:column; gap:13px}
+  .sec{display:flex; gap:9px; align-items:baseline; flex-wrap:wrap}
+  .sec b{font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); font-weight:700}
+  .sec span{font-size:12.5px; color:var(--ink-3)}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px 8px}
+  .chead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; gap:10px; flex-wrap:wrap}
+  .chead .t{font-size:13.5px; font-weight:650}
+  .chead .t .step{color:var(--ink-3); font-weight:500}
+  .chead .now{font-size:12px; color:var(--ink-3); white-space:nowrap}
+  .chead .now b{color:var(--ink); font-size:15px}
+  .legend{display:flex; gap:14px; font-size:11.5px; color:var(--ink-2)}
+  .legend i{display:inline-block; width:14px; height:3px; border-radius:2px; vertical-align:middle; margin-right:5px}
+  svg{display:block; width:100%; overflow:visible}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px}
+  .stat{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:13px 15px}
+  .stat .l{font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); font-weight:600; line-height:1.35}
+  .stat .v{font-size:23px; font-weight:650; margin-top:4px; letter-spacing:-.01em}
+  .stat .s{font-size:12px; color:var(--ink-2); margin-top:2px}
+  .stat .p{font-size:11.5px; color:var(--ink-3); margin-top:3px}
+  .stat.hero{border-color:var(--teal)}
+  .stat.hero .v{color:var(--teal)}
+  table{width:100%; border-collapse:collapse; font-size:12px}
+  th{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); text-align:right; font-weight:600; padding:5px 7px; border-bottom:1px solid var(--border); white-space:nowrap}
+  th:first-child{text-align:left}
+  td{padding:4px 7px; border-bottom:1px solid var(--border-soft); color:var(--ink-2); text-align:right; white-space:nowrap}
+  td:first-child{text-align:left; color:var(--ink)}
+  th.sep,td.sep{border-left:1px solid var(--border)}
+  th.key{color:var(--amber)} td.key{color:var(--ink)}
+  tr.dip td{background:var(--band)}
+  .foot{font-size:12px; color:var(--ink-3); line-height:1.6; border-top:1px solid var(--border); padding-top:14px}
+  .tip{position:fixed; z-index:9; pointer-events:none; background:var(--ink); color:var(--surface);
+       font-size:12px; padding:7px 9px; border-radius:7px; opacity:0; transition:opacity .1s; white-space:nowrap; line-height:1.55}
+  details{font-size:13px} summary{cursor:pointer; color:var(--ink-2); font-weight:600; padding:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header>
+    <div class="eyebrow">Overchat · Дневной монитор конверсий</div>
+    <h1>Ключевая воронка по суткам</h1>
+    <div class="sub">Когорта по дню первого визита лендинга, вложенная воронка: лендинг → продукт → рег-попап → регистрация → пейволл → покупка. Все методы оплаты, prod-only, тест-юзеры исключены. Данные копятся ежедневно (Apps Script), период выбираешь ниже.</div>
+    <div class="stamp" id="stamp">загрузка данных…</div>
+  </header>
+
+  <div class="controls" id="controls" hidden>
+    <label>с <input type="date" id="f_from"></label>
+    <label>по <input type="date" id="f_to"></label>
+    <button class="chip" data-days="7">7д</button>
+    <button class="chip" data-days="14">14д</button>
+    <button class="chip" data-days="30">30д</button>
+    <button class="chip" data-days="0">Всё</button>
+    <span class="days" id="f_info"></span>
+  </div>
+
+  <div id="banner"></div>
+  <div id="error"></div>
+
+  <section class="block" id="blk_steps" hidden>
+    <div class="sec"><b>Пошаговые конверсии</b><span>— каждый график = один переход воронки. Здесь видно, ГДЕ именно теряем.</span></div>
+    <div class="card" id="s_lp"></div>
+    <div class="card" id="s_pp"></div>
+    <div class="card" id="s_pr"></div>
+    <div class="card" id="s_rp"></div>
+    <div class="card" id="s_pb"></div>
+  </section>
+
+  <section class="block" id="blk_split" hidden>
+    <div class="sec"><b>Покупки по дням</b><span>— одноразка vs подписка (юзеров, купивших после пейволла; юзер мог купить и то, и то).</span></div>
+    <div class="card" id="c_split"></div>
+  </section>
+
+  <section class="block" id="blk_thru" hidden>
+    <div class="sec"><b>Сквозные показатели</b><span>— здоровье воронки целиком + объём трафика.</span></div>
+    <div class="card" id="c_reg"></div>
+    <div class="card" id="c_buy"></div>
+    <div class="card" id="c_vol"></div>
+  </section>
+
+  <section class="block" id="blk_purch" hidden>
+    <div class="sec"><b>Покупки и апгрейды</b><span id="purch_win"></span></div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <details open id="blk_tbl" hidden>
+    <summary>Таблица по дням — счётчики шагов и пошаговые конверсии</summary>
+    <div style="overflow-x:auto; margin-top:8px">
+      <table id="tbl"><thead><tr>
+        <th>День</th><th>Лендинг</th><th>Продукт</th><th>Попап</th><th>Рега</th><th>Пейволл</th><th>Покупка</th>
+        <th>Однораз</th><th>Подписка</th>
+        <th class="sep">Л→Прод</th><th class="key">Прод→Поп</th><th>Поп→Рега</th><th>Рега→Пейв</th><th>Пейв→Куп</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </details>
+
+  <div class="foot" id="foot" hidden>
+    <b>Как читать.</b> Период задаётся фильтром сверху — под него подстраиваются графики, таблица и сетка «Покупки и апгрейды»
+    (она считается по событиям покупок внутри выбранного диапазона; в скобках — сравнение с предыдущим периодом той же длины).
+    Верхний блок — пошаговые конверсии: каждая линия изолирует один переход, провал сразу локализуется.
+    <i>Рега/лендинг</i> — компаунд трёх верхних шагов (общий индикатор, но прячет причину), <i>ленд→покупка</i> — из визита в деньги.
+    «Повтор» и «Onetime→подписка» требуют времени дозреть — у свежих покупателей это floor.
+    Полосы событий и подсветка строк — из <code>data/annotations.json</code> (правится руками в гите).
+    Последние дни истории чуть незрелы по нижним шагам. День недели влияет: выходные (○) обычно выше —
+    сравнивай тот же день недели или одинаковые периоды. Money-truth по суммам — Stripe; GA4 здесь — поведение и конверсии.
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const fmt=n=>n==null?"—":n.toLocaleString("ru-RU");
+const pct=(a,b,dec)=> (b>0&&a!=null)?+(a/b*100).toFixed(dec):null;
+const dnames=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+const dow=s=>{const [y,m,dd]=s.split("-").map(Number); return (new Date(Date.UTC(y,m-1,dd)).getUTCDay()+6)%7;};
+const isoToTs=s=>Date.parse(s+"T00:00:00Z")/1000;
+const COLORS={amber:"var(--amber-line)", teal:"var(--teal)", gray:"var(--ink-3)", violet:"var(--violet)"};
+let FULL=[], VIEW=[], USERS=null, SEED_TOTALS=null, ANN={}, EVENTS=[], BANDS=[], idx={}, GEN="";
+
+function derive(r){
+  r.landProd=pct(r.prod,r.land,1); r.prodPop=pct(r.pop,r.prod,1); r.popReg=pct(r.reg,r.pop,1);
+  r.regPay=pct(r.pay,r.reg,1);     r.payBuy=pct(r.buy,r.pay,2);
+  r.regPct=pct(r.reg,r.land,1);    r.landBuy=pct(r.buy,r.land,3);
+  return r;
+}
+
+async function loadJSON(p){
+  const r=await fetch(p,{cache:"no-store"});
+  if(!r.ok) throw new Error(p+" → HTTP "+r.status);
+  return r.json();
+}
+
+function chartMulti(el, series, dec, H){
+  const W=900,pl=44,pr=16,pt=14,pb=22, iw=W-pl-pr, ih=H-pt-pb;
+  const vals=series.flatMap(s=>VIEW.map(r=>r[s.key])).filter(v=>v!=null);
+  if(!vals.length){ el.innerHTML='<div style="color:var(--ink-3);font-size:12.5px;padding:18px 0">данных пока нет — появятся после первого прогона Apps Script</div>'; return; }
+  let mn=Math.min(...vals), mx=Math.max(...vals); const pad=(mx-mn)*0.15||1; mn-=pad; mx+=pad;
+  if(!series.some(s=>s.key==="land")) mn=Math.max(0,mn);
+  const n=VIEW.length, X=i=> n>1 ? pl+i/(n-1)*iw : pl+iw/2;
+  const Y=v=>pt+ih-(v-mn)/(mx-mn)*ih;
+  let g="";
+  BANDS.forEach(b=>{ const i1=idx[b.from], i2=idx[b.to];
+    if(i1==null&&i2==null) return;
+    const x1=X(i1??0), x2=X(i2??n-1);
+    g+=`<rect x="${x1}" y="${pt}" width="${x2-x1}" height="${ih}" fill="var(--band)"/>`;});
+  for(let k=0;k<=3;k++){const gv=mn+(mx-mn)*k/3, yy=Y(gv);
+    g+=`<line x1="${pl}" y1="${yy}" x2="${W-pr}" y2="${yy}" stroke="var(--grid)" stroke-width="1"/>`+
+       `<text x="${pl-6}" y="${yy+3.5}" text-anchor="end" font-size="10" fill="var(--ink-3)" class="num">${gv.toFixed(dec)}</text>`;}
+  EVENTS.forEach(e=>{ if(idx[e.d]==null) return; const ex=X(idx[e.d]);
+    g+=`<line x1="${ex}" y1="${pt}" x2="${ex}" y2="${pt+ih}" stroke="${COLORS[e.color]||e.color}" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.75"/>`;});
+  const lblStep=Math.max(1,Math.ceil(n/11));
+  VIEW.forEach((r,i)=>{ if(i%lblStep===0||i===n-1){
+    g+=`<text x="${X(i)}" y="${H-6}" text-anchor="middle" font-size="9.5" fill="var(--ink-3)" class="num">${r.d.slice(5)}</text>`;}});
+  series.forEach(s=>{
+    let d="",pen=false;
+    VIEW.forEach((r,i)=>{ const v=r[s.key];
+      if(v==null){pen=false;return;}
+      d+=(pen?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" "; pen=true;});
+    g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    for(let i=n-1;i>=0;i--){ const v=VIEW[i][s.key];
+      if(v!=null){ g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="3.5" fill="${s.color}" stroke="var(--card)" stroke-width="1.5"/>`; break; } }
+  });
+  const cw=n>1?iw/(n-1):iw;
+  VIEW.forEach((r,i)=>{g+=`<rect x="${X(i)-cw/2}" y="${pt}" width="${cw}" height="${ih}" fill="transparent" data-i="${i}" class="hit"/>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">${g}</svg>`;
+}
+
+function card(id,title,step,series,unit,dec,H){
+  const el=$(id); const last=VIEW[VIEW.length-1];
+  const nowVal=last?last[series[0].key]:null;
+  const sub=step?` <span class="step">${step}</span>`:"";
+  const legend=series.length>1
+    ? `<span class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("")}</span>`
+    : `<span class="now">${last?last.d.slice(5).replace("-","."):""}: <b class="num">${nowVal==null?"—":nowVal+unit}</b></span>`;
+  el.innerHTML=`<div class="chead"><span class="t">${title}${sub}</span>${legend}</div><div class="cv"></div>`;
+  chartMulti(el.querySelector(".cv"),series,dec,H);
+}
+
+// --- покупки/апгрейды по событиям юзеров внутри диапазона ---
+function purchStats(fromTs,toTs){
+  const t={any:0,ot:0,sub:0,both:0,rep:0,repOt:0,upg:0,subPrior:0};
+  USERS.forEach(u=>{
+    const o=(u.o||[]).filter(x=>x>=fromTs&&x<toTs), s=(u.s||[]).filter(x=>x>=fromTs&&x<toTs);
+    const n=o.length+s.length; if(!n) return;
+    t.any++; if(o.length)t.ot++; if(s.length)t.sub++; if(o.length&&s.length)t.both++;
+    if(n>=2)t.rep++; if(o.length>=2)t.repOt++;
+    if(o.length&&s.length&&s[s.length-1]>o[0])t.upg++;
+    if(o.length&&s.length&&o[0]<s[0])t.subPrior++;
+  });
+  return t;
+}
+function renderPurch(fromIso,toIso){
+  const box=$("stats");
+  const stat=(l,v,s,p,hero)=>`<div class="stat${hero?" hero":""}"><div class="l">${l}</div><div class="v num">${v}</div><div class="s">${s||""}</div>${p?`<div class="p num">${p}</div>`:""}</div>`;
+  if(!USERS || !USERS.length){
+    if(SEED_TOTALS){
+      const t=SEED_TOTALS.totals, w=SEED_TOTALS.window;
+      $("purch_win").textContent=`— ⚠️ сид-снапшот за фикс-окно ${w.from} — ${w.to}; фильтр дат заработает после первого прогона Apps Script.`;
+      box.innerHTML=
+        stat("Покупателей всего",fmt(t.any_buyers),"")+
+        stat("Одноразка",fmt(t.onetime_buyers),pct(t.onetime_buyers,t.any_buyers,1)+"% покупателей")+
+        stat("Подписка",fmt(t.sub_buyers),pct(t.sub_buyers,t.any_buyers,1)+"% покупателей")+
+        stat("Повторная покупка",pct(t.repeat_any,t.any_buyers,1)+"%",fmt(t.repeat_any)+" юзеров с ≥2 покупками")+
+        stat("Onetime → подписка",pct(t.onetime_then_sub,t.onetime_buyers,1)+"%",fmt(t.onetime_then_sub)+" из "+fmt(t.onetime_buyers)+" одноразников","",true)+
+        stat("Подписчики из одноразки",pct(t.sub_had_prior_onetime,t.sub_buyers,1)+"%",fmt(t.sub_had_prior_onetime)+" из "+fmt(t.sub_buyers)+" подписчиков");
+      return;
+    }
+    box.innerHTML=""; $("purch_win").textContent="— данных пока нет.";
+    return;
+  }
+  const fromTs=isoToTs(fromIso), toTs=isoToTs(toIso)+86400;
+  const len=toTs-fromTs;
+  const cur=purchStats(fromTs,toTs), prev=purchStats(fromTs-len,fromTs);
+  const dpp=(a,b,ac,bc)=>{ const x=pct(a,ac,1), y=pct(b,bc,1);
+    if(x==null||y==null) return ""; const d=+(x-y).toFixed(1);
+    return `пред.: ${y}% (${d>0?"+":""}${d} п.п.)`; };
+  const dn=(a,b)=>{ if(b==null) return ""; const d=a-b; return `пред.: ${fmt(b)} (${d>0?"+":""}${fmt(d)})`; };
+  $("purch_win").textContent=`— уровень юзера, ${fromIso} — ${toIso}, в скобках сравнение с предыдущим периодом той же длины. Повтор/апгрейд — floor (хвост не дозрел).`;
+  box.innerHTML=
+    stat("Покупателей всего",fmt(cur.any),"",dn(cur.any,prev.any))+
+    stat("Одноразка",fmt(cur.ot),pct(cur.ot,cur.any,1)+"% покупателей",dn(cur.ot,prev.ot))+
+    stat("Подписка",fmt(cur.sub),pct(cur.sub,cur.any,1)+"% покупателей",dn(cur.sub,prev.sub))+
+    stat("Повторная покупка",(pct(cur.rep,cur.any,1)??"—")+"%",fmt(cur.rep)+" юзеров с ≥2 покупками",dpp(cur.rep,prev.rep,cur.any,prev.any))+
+    stat("Onetime → подписка",(pct(cur.upg,cur.ot,1)??"—")+"%",fmt(cur.upg)+" из "+fmt(cur.ot)+" одноразников",dpp(cur.upg,prev.upg,cur.ot,prev.ot),true)+
+    stat("Подписчики из одноразки",(pct(cur.subPrior,cur.sub,1)??"—")+"%",fmt(cur.subPrior)+" из "+fmt(cur.sub)+" подписчиков",dpp(cur.subPrior,prev.subPrior,cur.sub,prev.sub));
+}
+
+function renderAll(){
+  const from=$("f_from").value, to=$("f_to").value;
+  VIEW=FULL.filter(r=>r.d>=from&&r.d<=to);
+  idx=Object.fromEntries(VIEW.map((r,i)=>[r.d,i]));
+  EVENTS=(ANN.events||[]).filter(e=>idx[e.d]!=null);
+  BANDS=(ANN.bands||[]).filter(b=>(b.from<=to&&b.to>=from));
+  $("f_info").textContent=VIEW.length+" дн.";
+  document.querySelectorAll(".chip").forEach(c=>{
+    const d=+c.dataset.days;
+    const want=d===0?FULL.length:d;
+    c.classList.toggle("on", VIEW.length===want && to===FULL[FULL.length-1].d);
+  });
+
+  card("s_lp","Лендинг → продукт","доля визитов, дошедших до продукта",[{key:"landProd",color:"var(--teal)"}],"%",0,126);
+  card("s_pp","Продукт → рег-попап","показ попапа регистрации",[{key:"prodPop",color:"var(--amber-line)"}],"%",0,126);
+  card("s_pr","Рег-попап → регистрация","отправка формы",[{key:"popReg",color:"var(--teal)"}],"%",0,126);
+  card("s_rp","Регистрация → пейволл","дошли до платного экрана",[{key:"regPay",color:"var(--teal)"}],"%",0,126);
+  card("s_pb","Пейволл → покупка","оплата после пейволла",[{key:"payBuy",color:"var(--teal)"}],"%",1,126);
+  card("c_split","Покупки по дням","юзеров с покупкой после пейволла",
+       [{key:"buyOt",color:"var(--teal)",name:"одноразка"},{key:"buySub",color:"var(--violet)",name:"подписка"}],"",0,150);
+  card("c_reg","Регистрация / лендинг","компаунд трёх шагов выше",[{key:"regPct",color:"var(--violet)"}],"%",0,150);
+  card("c_buy","Лендинг → покупка","сквозная, визит → деньги",[{key:"landBuy",color:"var(--violet)"}],"%",2,150);
+  card("c_vol","Визиты лендингов","объём трафика",[{key:"land",color:"var(--ink-3)"}],"",0,150);
+
+  renderPurch(from,to);
+
+  const tb=document.querySelector("#tbl tbody"); tb.innerHTML="";
+  VIEW.forEach(r=>{
+    const inBand=BANDS.some(b=>r.d>=b.from&&r.d<=b.to);
+    const tr=document.createElement("tr"); if(inBand)tr.className="dip";
+    const wknd=dow(r.d)>=5?" ○":"";
+    tr.innerHTML=`<td>${dnames[dow(r.d)]} ${r.d.slice(5)}${wknd}</td>
+      <td class="num">${fmt(r.land)}</td><td class="num">${fmt(r.prod)}</td><td class="num">${fmt(r.pop)}</td>
+      <td class="num">${fmt(r.reg)}</td><td class="num">${fmt(r.pay)}</td><td class="num">${fmt(r.buy)}</td>
+      <td class="num">${fmt(r.buyOt)}</td><td class="num">${fmt(r.buySub)}</td>
+      <td class="num sep">${r.landProd}%</td><td class="num key">${r.prodPop}%</td><td class="num">${r.popReg}%</td>
+      <td class="num">${r.regPay}%</td><td class="num">${r.payBuy}%</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function setRange(fromIso,toIso){ $("f_from").value=fromIso; $("f_to").value=toIso; renderAll(); }
+
+document.addEventListener("mousemove",e=>{
+  const tip=$("tip");
+  const h=e.target.closest?.(".hit"); if(!h){tip.style.opacity=0;return;}
+  const r=VIEW[+h.dataset.i]; if(!r){tip.style.opacity=0;return;}
+  tip.style.opacity=1; tip.style.left=Math.min(e.clientX+13,innerWidth-240)+"px"; tip.style.top=(e.clientY+14)+"px";
+  const ev=EVENTS.find(x=>x.d===r.d);
+  tip.innerHTML=`<b>${dnames[dow(r.d)]} ${r.d.slice(5)}</b> · лендинг ${fmt(r.land)}${ev?` · <b>${ev.label}</b>`:""}<br>`+
+    `л→прод <b>${r.landProd}%</b> · прод→поп <b>${r.prodPop}%</b> · поп→рега <b>${r.popReg}%</b><br>`+
+    `рега→пейв <b>${r.regPay}%</b> · пейв→куп <b>${r.payBuy}%</b> · куп ${fmt(r.buy)} (${fmt(r.buyOt)}/${fmt(r.buySub)})<br>`+
+    `<span style="opacity:.7">рега/ленд ${r.regPct}% · ленд→куп ${r.landBuy}%</span>`;
+});
+
+(async()=>{
+  try{
+    const [daily,purch,ann]=await Promise.all([
+      loadJSON("data/funnel_daily.json"),
+      loadJSON("data/purchases_events.json").catch(()=>loadJSON("data/purchases.json")), // legacy seed
+      loadJSON("data/annotations.json").catch(()=>({}))
+    ]);
+    ANN=ann;
+    FULL=daily.rows.map(r=>derive({
+      d:r.landing_day, land:+r.landing, prod:+r.product, pop:+r.reg_popup,
+      reg:+r.registration, pay:+r.paywall, buy:+r.purchase,
+      buyOt:r.purchase_onetime==null?null:+r.purchase_onetime,
+      buySub:r.purchase_sub==null?null:+r.purchase_sub
+    }));
+    if(purch.users&&purch.users.length) USERS=purch.users;
+    else if(purch.totals) SEED_TOTALS=purch;               // legacy seed purchases.json
+    else if(purch.seed_totals) SEED_TOTALS={totals:purch.seed_totals,window:purch.seed_window};
+
+    const gen=new Date(daily.generated_at);
+    $("stamp").textContent=`История: ${FULL[0].d} — ${FULL[FULL.length-1].d} · данные обновлены ${gen.toLocaleString("ru-RU",{timeZone:"UTC"})} UTC`+(daily.seed?" · ⚠️ сид-снапшот (Apps Script ещё не прогонялся)":"");
+    if(ANN.banner) $("banner").innerHTML=`<div class="alert"><h3>${ANN.banner.title}</h3><p>${ANN.banner.html}</p></div>`;
+
+    const lastD=FULL[FULL.length-1].d;
+    const min=FULL[0].d;
+    $("f_from").min=min; $("f_from").max=lastD; $("f_to").min=min; $("f_to").max=lastD;
+    $("f_from").addEventListener("change",renderAll);
+    $("f_to").addEventListener("change",renderAll);
+    document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+      const d=+c.dataset.days;
+      if(d===0) setRange(min,lastD);
+      else{ const i=Math.max(0,FULL.length-d); setRange(FULL[i].d,lastD); }
+    }));
+    ["controls","blk_steps","blk_split","blk_thru","blk_purch","blk_tbl","foot"].forEach(id=>$(id).hidden=false);
+    const i30=Math.max(0,FULL.length-30);
+    setRange(FULL[i30].d,lastD);
+  }catch(err){
+    $("stamp").textContent="";
+    $("error").innerHTML=`<div class="err"><b>Не смог загрузить данные</b> (${err.message}).<br>
+      Страницу надо открывать по HTTP (GitHub Pages или <code>python3 -m http.server</code> в папке dashboard/) —
+      через file:// браузер блокирует fetch. Проверь, что файлы <code>data/*.json</code> лежат рядом.</div>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+{
+ "generated_at": "2026-07-22T00:00:00Z",
+ "seed": true,
+ "window": {
+  "from": "2026-06-21",
+  "to": "2026-07-20"
+ },
+ "rows": [
+  {
+   "landing_day": "2026-06-21",
+   "landing": 9761,
+   "product": 6103,
+   "reg_popup": 4779,
+   "registration": 2719,
+   "paywall": 2577,
+   "purchase": 56,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-22",
+   "landing": 9578,
+   "product": 5627,
+   "reg_popup": 4277,
+   "registration": 2325,
+   "paywall": 2194,
+   "purchase": 41,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-23",
+   "landing": 9673,
+   "product": 5598,
+   "reg_popup": 4219,
+   "registration": 2306,
+   "paywall": 2162,
+   "purchase": 37,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-24",
+   "landing": 9817,
+   "product": 5735,
+   "reg_popup": 4357,
+   "registration": 2391,
+   "paywall": 2216,
+   "purchase": 35,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-25",
+   "landing": 10344,
+   "product": 6106,
+   "reg_popup": 4706,
+   "registration": 2605,
+   "paywall": 2454,
+   "purchase": 43,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-26",
+   "landing": 10131,
+   "product": 5832,
+   "reg_popup": 4481,
+   "registration": 2414,
+   "paywall": 2277,
+   "purchase": 42,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-27",
+   "landing": 9746,
+   "product": 5925,
+   "reg_popup": 4579,
+   "registration": 2500,
+   "paywall": 2334,
+   "purchase": 43,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-28",
+   "landing": 10594,
+   "product": 6567,
+   "reg_popup": 5010,
+   "registration": 2814,
+   "paywall": 2643,
+   "purchase": 57,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-29",
+   "landing": 10922,
+   "product": 6484,
+   "reg_popup": 4875,
+   "registration": 2706,
+   "paywall": 2554,
+   "purchase": 46,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-06-30",
+   "landing": 10796,
+   "product": 6213,
+   "reg_popup": 4626,
+   "registration": 2551,
+   "paywall": 2393,
+   "purchase": 42,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-01",
+   "landing": 11354,
+   "product": 6397,
+   "reg_popup": 4622,
+   "registration": 2570,
+   "paywall": 2413,
+   "purchase": 54,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-02",
+   "landing": 12410,
+   "product": 6911,
+   "reg_popup": 5027,
+   "registration": 2846,
+   "paywall": 2655,
+   "purchase": 71,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-03",
+   "landing": 10312,
+   "product": 6111,
+   "reg_popup": 4808,
+   "registration": 2775,
+   "paywall": 2562,
+   "purchase": 55,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-04",
+   "landing": 9672,
+   "product": 6257,
+   "reg_popup": 5297,
+   "registration": 3140,
+   "paywall": 2871,
+   "purchase": 68,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-05",
+   "landing": 9659,
+   "product": 6193,
+   "reg_popup": 5269,
+   "registration": 3199,
+   "paywall": 2920,
+   "purchase": 71,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-06",
+   "landing": 10267,
+   "product": 6226,
+   "reg_popup": 5303,
+   "registration": 3126,
+   "paywall": 2852,
+   "purchase": 50,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-07",
+   "landing": 11084,
+   "product": 6756,
+   "reg_popup": 5931,
+   "registration": 3503,
+   "paywall": 3225,
+   "purchase": 82,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-08",
+   "landing": 10942,
+   "product": 6868,
+   "reg_popup": 5532,
+   "registration": 3241,
+   "paywall": 2958,
+   "purchase": 88,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-09",
+   "landing": 11743,
+   "product": 7411,
+   "reg_popup": 4078,
+   "registration": 2199,
+   "paywall": 1935,
+   "purchase": 45,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-10",
+   "landing": 11482,
+   "product": 7331,
+   "reg_popup": 4157,
+   "registration": 2316,
+   "paywall": 2092,
+   "purchase": 41,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-11",
+   "landing": 10906,
+   "product": 7177,
+   "reg_popup": 4032,
+   "registration": 2277,
+   "paywall": 2018,
+   "purchase": 28,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-12",
+   "landing": 11543,
+   "product": 7473,
+   "reg_popup": 4272,
+   "registration": 2334,
+   "paywall": 2076,
+   "purchase": 32,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-13",
+   "landing": 12082,
+   "product": 7200,
+   "reg_popup": 3977,
+   "registration": 2190,
+   "paywall": 1951,
+   "purchase": 27,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-14",
+   "landing": 12359,
+   "product": 6937,
+   "reg_popup": 3839,
+   "registration": 2107,
+   "paywall": 1870,
+   "purchase": 35,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-15",
+   "landing": 12600,
+   "product": 6951,
+   "reg_popup": 3747,
+   "registration": 2045,
+   "paywall": 1788,
+   "purchase": 27,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-16",
+   "landing": 12191,
+   "product": 6958,
+   "reg_popup": 3882,
+   "registration": 2087,
+   "paywall": 1823,
+   "purchase": 25,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-17",
+   "landing": 12342,
+   "product": 7493,
+   "reg_popup": 4415,
+   "registration": 2650,
+   "paywall": 2172,
+   "purchase": 59,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-18",
+   "landing": 11170,
+   "product": 7190,
+   "reg_popup": 4448,
+   "registration": 2959,
+   "paywall": 2450,
+   "purchase": 101,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-19",
+   "landing": 10876,
+   "product": 6939,
+   "reg_popup": 4289,
+   "registration": 2837,
+   "paywall": 2351,
+   "purchase": 70,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  },
+  {
+   "landing_day": "2026-07-20",
+   "landing": 9913,
+   "product": 5599,
+   "reg_popup": 3462,
+   "registration": 2214,
+   "paywall": 1768,
+   "purchase": 59,
+   "purchase_onetime": null,
+   "purchase_sub": null
+  }
+ ]
+}
