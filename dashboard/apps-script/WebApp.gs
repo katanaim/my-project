@@ -26,7 +26,9 @@ function doPost(e) {
   catch (err) { return json_({ error: 'bad json' }); }
   if (!token || body.token !== token) return json_({ error: 'unauthorized' });
 
-  var sql = String(body.sql || '').trim().replace(/;\s*$/, '');
+  var sql = String(body.sql || '');
+  sql = sql.split('\n').filter(function (l) { return l.replace(/^\s+/, '').indexOf('--') !== 0; }).join('\n')
+           .trim().replace(/;\s*$/, '');  // строки-комментарии не должны ронять проверку SELECT
   if (!/^(WITH|SELECT)\b/i.test(sql)) return json_({ error: 'only SELECT/WITH allowed' });
   if (sql.indexOf(';') !== -1)        return json_({ error: 'single statement only' });
 

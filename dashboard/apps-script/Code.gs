@@ -223,6 +223,10 @@ function refreshRange_(fromDate, toDate, scanToDate, label) {
   var oldRows = (exDaily && exDaily.json.rows) || [];
   var rows = oldRows.filter(function (r) { return r.landing_day < fromIso || r.landing_day > toIso; }).concat(fresh);
   rows.sort(function (a, b) { return a.landing_day < b.landing_day ? -1 : 1; });
+  // защита от дублей дня (краевые частичные когорты из старых прогонов): оставляем строку с бОльшим landing
+  var byDay = {};
+  rows.forEach(function (r) { if (!byDay[r.landing_day] || r.landing > byDay[r.landing_day].landing) byDay[r.landing_day] = r; });
+  rows = Object.keys(byDay).sort().map(function (k) { return byDay[k]; });
   var dailyJson = { generated_at: stamp, history_start: CFG.HISTORY_START,
     window: { from: rows[0].landing_day, to: rows[rows.length - 1].landing_day }, rows: rows };
 
