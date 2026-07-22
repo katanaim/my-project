@@ -81,7 +81,7 @@
   <header>
     <div class="eyebrow">Overchat · Дневной монитор конверсий</div>
     <h1>Ключевая воронка по суткам</h1>
-    <div class="sub">Когорта по дню первого визита лендинга, вложенная воронка: лендинг → продукт → рег-попап → регистрация → пейволл → покупка. Все методы оплаты, prod-only, тест-юзеры исключены. Данные копятся ежедневно (Apps Script), период выбираешь ниже.</div>
+    <div class="sub">Когорта по дню первого визита лендинга, вложенная воронка: лендинг → продукт → регистрация → пейволл → покупка (рег-попап — справочная линия, его трекинг ненадёжен). Все методы оплаты, prod-only, тест-юзеры и стейдж исключены. Данные копятся ежедневно (Apps Script), период выбираешь ниже.</div>
     <div class="stamp" id="stamp">загрузка данных…</div>
   </header>
 
@@ -132,7 +132,7 @@
       <table id="tbl"><thead><tr>
         <th>День</th><th>Лендинг</th><th>Продукт</th><th>Попап</th><th>Рега</th><th>Пейволл</th><th>Покупка</th>
         <th>Однораз</th><th>Подписка</th>
-        <th class="sep">Л→Прод</th><th class="key">Прод→Поп</th><th>Поп→Рега</th><th>Рега→Пейв</th><th>Пейв→Куп</th>
+        <th class="sep">Л→Прод</th><th>Прод→Рега</th><th class="key">Прод→Поп&nbsp;○</th><th>Рега→Пейв</th><th>Пейв→Куп</th>
       </tr></thead><tbody></tbody></table>
     </div>
   </details>
@@ -141,6 +141,8 @@
     <b>Как читать.</b> Период задаётся фильтром сверху — под него подстраиваются графики, таблица и сетка «Покупки и апгрейды»
     (она считается по событиям покупок внутри выбранного диапазона; в скобках — сравнение с предыдущим периодом той же длины).
     Верхний блок — пошаговые конверсии: каждая линия изолирует один переход, провал сразу локализуется.
+    Каскад воронки: лендинг → продукт → <b>рега</b> → пейволл → покупка (рега цепляется к продукту, НЕ к попапу —
+    трекинг попапа ненадёжен: ломался 09–16.07, переименовывался в июне; линия попапа (○) справочная).
     <i>Рега/лендинг</i> — компаунд трёх верхних шагов (общий индикатор, но прячет причину), <i>ленд→покупка</i> — из визита в деньги.
     «Повтор» и «Onetime→подписка» требуют времени дозреть — у свежих покупателей это floor.
     Полосы событий и подсветка строк — из <code>data/annotations.json</code> (правится руками в гите).
@@ -162,7 +164,7 @@ const COLORS={amber:"var(--amber-line)", teal:"var(--teal)", gray:"var(--ink-3)"
 let FULL=[], VIEW=[], USERS=null, SEED_TOTALS=null, ANN={}, EVENTS=[], BANDS=[], idx={}, GEN="";
 
 function derive(r){
-  r.landProd=pct(r.prod,r.land,1); r.prodPop=pct(r.pop,r.prod,1); r.popReg=pct(r.reg,r.pop,1);
+  r.landProd=pct(r.prod,r.land,1); r.prodReg=pct(r.reg,r.prod,1); r.prodPop=pct(r.pop,r.prod,1);
   r.regPay=pct(r.pay,r.reg,1);     r.payBuy=pct(r.buy,r.pay,2);
   r.regPct=pct(r.reg,r.land,1);    r.landBuy=pct(r.buy,r.land,3);
   return r;
@@ -283,8 +285,8 @@ function renderAll(){
   });
 
   card("s_lp","Лендинг → продукт","доля визитов, дошедших до продукта",[{key:"landProd",color:"var(--teal)"}],"%",0,126);
-  card("s_pp","Продукт → рег-попап","показ попапа регистрации",[{key:"prodPop",color:"var(--amber-line)"}],"%",0,126);
-  card("s_pr","Рег-попап → регистрация","отправка формы",[{key:"popReg",color:"var(--teal)"}],"%",0,126);
+  card("s_pp","Продукт → регистрация","ключевой шаг; рега не зависит от попапа",[{key:"prodReg",color:"var(--teal)"}],"%",0,126);
+  card("s_pr","Продукт → рег-попап","СПРАВОЧНО: трекинг попапа ломался (09–16.07) и переименовывался",[{key:"prodPop",color:"var(--amber-line)"}],"%",0,126);
   card("s_rp","Регистрация → пейволл","дошли до платного экрана",[{key:"regPay",color:"var(--teal)"}],"%",0,126);
   card("s_pb","Пейволл → покупка","оплата после пейволла",[{key:"payBuy",color:"var(--teal)"}],"%",1,126);
   card("c_split","Покупки по дням","юзеров с покупкой после пейволла",
@@ -304,7 +306,7 @@ function renderAll(){
       <td class="num">${fmt(r.land)}</td><td class="num">${fmt(r.prod)}</td><td class="num">${fmt(r.pop)}</td>
       <td class="num">${fmt(r.reg)}</td><td class="num">${fmt(r.pay)}</td><td class="num">${fmt(r.buy)}</td>
       <td class="num">${fmt(r.buyOt)}</td><td class="num">${fmt(r.buySub)}</td>
-      <td class="num sep">${r.landProd}%</td><td class="num key">${r.prodPop}%</td><td class="num">${r.popReg}%</td>
+      <td class="num sep">${r.landProd}%</td><td class="num">${r.prodReg}%</td><td class="num key">${r.prodPop}%</td>
       <td class="num">${r.regPay}%</td><td class="num">${r.payBuy}%</td>`;
     tb.appendChild(tr);
   });
@@ -319,7 +321,7 @@ document.addEventListener("mousemove",e=>{
   tip.style.opacity=1; tip.style.left=Math.min(e.clientX+13,innerWidth-240)+"px"; tip.style.top=(e.clientY+14)+"px";
   const ev=EVENTS.find(x=>x.d===r.d);
   tip.innerHTML=`<b>${dnames[dow(r.d)]} ${r.d.slice(5)}</b> · лендинг ${fmt(r.land)}${ev?` · <b>${ev.label}</b>`:""}<br>`+
-    `л→прод <b>${r.landProd}%</b> · прод→поп <b>${r.prodPop}%</b> · поп→рега <b>${r.popReg}%</b><br>`+
+    `л→прод <b>${r.landProd}%</b> · прод→рега <b>${r.prodReg}%</b> · прод→поп(○) <b>${r.prodPop}%</b><br>`+
     `рега→пейв <b>${r.regPay}%</b> · пейв→куп <b>${r.payBuy}%</b> · куп ${fmt(r.buy)} (${fmt(r.buyOt)}/${fmt(r.buySub)})<br>`+
     `<span style="opacity:.7">рега/ленд ${r.regPct}% · ленд→куп ${r.landBuy}%</span>`;
 });

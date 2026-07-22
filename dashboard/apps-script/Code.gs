@@ -86,7 +86,8 @@ function dailySql_(loYmd, hiYmd) {
 "  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
 "  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
-"    AND IFNULL(device.web_info.hostname,'') != 'stage.overchat.ai'\n" +
+"    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
+"    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user')\n" +
 ")\n" +
 ", base AS (\n" +
 "  SELECT user_pseudo_id, ts, step FROM (\n" +
@@ -109,8 +110,10 @@ function dailySql_(loYmd, hiYmd) {
 ")\n" +
 ", s1 AS (SELECT user_pseudo_id, MIN(ts) t1 FROM base WHERE step='landing' GROUP BY 1)\n" +
 ", s2 AS (SELECT b.user_pseudo_id, MIN(b.ts) t2 FROM base b JOIN s1 USING(user_pseudo_id) WHERE b.step='product'      AND b.ts>s1.t1 GROUP BY 1)\n" +
+// s3 (рег-попап) — СПРАВОЧНАЯ метрика, НЕ звено каскада: его трекинг ломался (09-16.07) и переименовывался (get stars → sign up)
 ", s3 AS (SELECT b.user_pseudo_id, MIN(b.ts) t3 FROM base b JOIN s2 USING(user_pseudo_id) WHERE b.step='reg_popup'    AND b.ts>s2.t2 GROUP BY 1)\n" +
-", s4 AS (SELECT b.user_pseudo_id, MIN(b.ts) t4 FROM base b JOIN s3 USING(user_pseudo_id) WHERE b.step='registration' AND b.ts>s3.t3 GROUP BY 1)\n" +
+// рега цепляется к ПРОДУКТУ (s2), не к попапу — login/registration стабилен всю историю
+", s4 AS (SELECT b.user_pseudo_id, MIN(b.ts) t4 FROM base b JOIN s2 USING(user_pseudo_id) WHERE b.step='registration' AND b.ts>s2.t2 GROUP BY 1)\n" +
 ", s5 AS (SELECT b.user_pseudo_id, MIN(b.ts) t5 FROM base b JOIN s4 USING(user_pseudo_id) WHERE b.step='paywall'      AND b.ts>s4.t4 GROUP BY 1)\n" +
 ", s6 AS (SELECT b.user_pseudo_id, MIN(b.ts) t6 FROM base b JOIN s5 USING(user_pseudo_id) WHERE b.step IN ('buy_onetime','buy_sub') AND b.ts>s5.t5 GROUP BY 1)\n" +
 ", s6a AS (SELECT b.user_pseudo_id, MIN(b.ts) t6a FROM base b JOIN s5 USING(user_pseudo_id) WHERE b.step='buy_onetime' AND b.ts>s5.t5 GROUP BY 1)\n" +
@@ -145,7 +148,8 @@ function purchasesSql_(loYmd, hiYmd) {
 "  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
 "    AND event_name IN ('purchase_onetime','subscription_started')\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
-"    AND IFNULL(device.web_info.hostname,'') != 'stage.overchat.ai'\n" +
+"    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
+"    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user')\n" +
 ")\n" +
 ", purf AS (SELECT * FROM pur)\n" +
 "SELECT SUBSTR(TO_HEX(MD5(user_pseudo_id)), 1, 12) AS uid,\n" +
