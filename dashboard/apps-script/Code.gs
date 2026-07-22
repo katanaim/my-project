@@ -22,9 +22,11 @@ var CFG = {
   GH_BRANCH: 'master',                      // куда коммитить данные (дефолтная ветка репо)
   PATH_DAILY: 'dashboard/data/funnel_daily.json',
   PATH_PURCH: 'dashboard/data/purchases_events.json',
-  HISTORY_START: '2026-06-21',              // с какого дня копим историю
+  HISTORY_START: '2026-01-22',              // с какого дня копим историю (~полгода)
   RECOMPUTE_DAYS: 14,                       // сколько последних зрелых дней пересчитывать каждый прогон
-  BUFFER_DAYS: 2                            // последние N дней не берём (лаг экспорта)
+  BUFFER_DAYS: 2,                           // последние N дней не берём (лаг экспорта)
+  CHUNK_DAYS: 30,                           // размер куска бэкфилла (лимит Apps Script — 6 мин/запуск)
+  CHUNK_LOOKAHEAD: 7                        // при бэкфилле сканим +N дней вперёд, чтобы дозрели нижние шаги
 };
 
 // ---------------------------------------------------------------------------
@@ -205,53 +207,84 @@ function ghPutFile_(path, contentStr, message, sha) {
 }
 
 // ---------------------------------------------------------------------------
-// ГЛАВНАЯ: запускать ежедневно (и один раз руками для проверки/бэкфилла)
-function runDaily() {
-  var now = new Date();
-  var stamp = Utilities.formatDate(now, 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
-  var mature = addDays_(now, -CFG.BUFFER_DAYS);            // последний зрелый день
-  var histStart = parseIso_(CFG.HISTORY_START);
+// ЯДРО: пересчитать диапазон [fromDate..toDate] и вшить его в историю.
+// Заменяет строки/события ВНУТРИ диапазона, всё остальное не трогает.
+// scanToDate (опц.) — досканить дальше toDate, чтобы дозрели нижние шаги; когорты берём только до toDate.
+function refreshRange_(fromDate, toDate, scanToDate, label) {
+  var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  var fromIso = iso_(fromDate), toIso = iso_(toDate);
+  var scanTo = scanToDate || toDate;
 
-  // --- воронка: инкремент или полный бэкфилл ---
+  // --- воронка ---
   var exDaily = ghGetJson_(CFG.PATH_DAILY);
-  var hasHistory = exDaily && exDaily.json.rows && exDaily.json.rows.length && !exDaily.json.seed;
-  var scanFrom = hasHistory
-    ? new Date(Math.max(histStart.getTime(), addDays_(mature, -(CFG.RECOMPUTE_DAYS - 1)).getTime()))
-    : histStart;
-  if (scanFrom > mature) throw new Error('Окно пусто: scanFrom > mature (проверь BUFFER/HISTORY_START)');
-
-  var fresh = bqQuery_(dailySql_(ymd_(scanFrom), ymd_(mature)));
-  if (!fresh.length) throw new Error('Дневная воронка вернула 0 строк — не коммичу (проверь запрос/окно)');
-  var cut = iso_(scanFrom);
-  var keep = hasHistory ? exDaily.json.rows.filter(function (r) { return r.landing_day < cut; }) : [];
-  var rows = keep.concat(fresh);
+  var fresh = bqQuery_(dailySql_(ymd_(fromDate), ymd_(scanTo)))
+    .filter(function (r) { return r.landing_day >= fromIso && r.landing_day <= toIso; });
+  if (!fresh.length) throw new Error('Воронка вернула 0 строк за ' + fromIso + '..' + toIso + ' — не коммичу');
+  var oldRows = (exDaily && exDaily.json.rows) || [];
+  var rows = oldRows.filter(function (r) { return r.landing_day < fromIso || r.landing_day > toIso; }).concat(fresh);
+  rows.sort(function (a, b) { return a.landing_day < b.landing_day ? -1 : 1; });
   var dailyJson = { generated_at: stamp, history_start: CFG.HISTORY_START,
     window: { from: rows[0].landing_day, to: rows[rows.length - 1].landing_day }, rows: rows };
 
-  // --- покупки: мерж событий по хешу юзера ---
+  // --- покупки: заменить события внутри [fromTs, toTs) ---
   var exPurch = ghGetJson_(CFG.PATH_PURCH);
-  var hasPurch = exPurch && exPurch.json.users && exPurch.json.users.length;
-  var scanFromTs = Math.floor(scanFrom.getTime() / 1000);
+  var fromTs = Math.floor(fromDate.getTime() / 1000), toTs = Math.floor(addDays_(toDate, 1).getTime() / 1000);
+  var outside = function (t) { return t < fromTs || t >= toTs; };
   var map = {};
-  if (hasPurch) exPurch.json.users.forEach(function (u) {
-    map[u.id] = { o: (u.o || []).filter(function (t) { return t < scanFromTs; }),
-                  s: (u.s || []).filter(function (t) { return t < scanFromTs; }) };
+  ((exPurch && exPurch.json.users) || []).forEach(function (u) {
+    map[u.id] = { o: (u.o || []).filter(outside), s: (u.s || []).filter(outside) };
   });
-  bqQuery_(purchasesSql_(ymd_(scanFrom), ymd_(mature))).forEach(function (u) {
+  bqQuery_(purchasesSql_(ymd_(fromDate), ymd_(toDate))).forEach(function (u) {
     var m = map[u.uid] || (map[u.uid] = { o: [], s: [] });
-    m.o = m.o.concat(u.o || []); m.s = m.s.concat(u.s || []);
+    m.o = m.o.concat((u.o || []).filter(function (t) { return !outside(t); }));
+    m.s = m.s.concat((u.s || []).filter(function (t) { return !outside(t); }));
   });
   var users = Object.keys(map).map(function (id) {
     var m = map[id]; m.o.sort(function(a,b){return a-b}); m.s.sort(function(a,b){return a-b});
     return { id: id, o: m.o, s: m.s };
   }).filter(function (u) { return u.o.length || u.s.length; });
-  if (!users.length) throw new Error('Покупки вернули 0 юзеров — не коммичу');
   var purchJson = { generated_at: stamp, history_start: CFG.HISTORY_START, users: users };
 
-  var day = Utilities.formatDate(now, 'UTC', 'yyyy-MM-dd');
-  ghPutFile_(CFG.PATH_DAILY, JSON.stringify(dailyJson, null, 1), 'data: funnel daily refresh ' + day, exDaily && exDaily.sha);
-  ghPutFile_(CFG.PATH_PURCH, JSON.stringify(purchJson), 'data: purchases refresh ' + day, exPurch && exPurch.sha);
-  Logger.log('OK: %s дней истории (скан с %s), %s покупателей', rows.length, cut, users.length);
+  ghPutFile_(CFG.PATH_DAILY, JSON.stringify(dailyJson, null, 1), 'data: funnel ' + label + ' ' + fromIso + '..' + toIso, exDaily && exDaily.sha);
+  ghPutFile_(CFG.PATH_PURCH, JSON.stringify(purchJson), 'data: purchases ' + label + ' ' + fromIso + '..' + toIso, exPurch && exPurch.sha);
+  Logger.log('OK %s: %s..%s → %s дней истории, %s покупателей', label, fromIso, toIso, rows.length, users.length);
+}
+
+// ГЛАВНАЯ: запускать ежедневно — пересчитывает последние RECOMPUTE_DAYS зрелых дней
+function runDaily() {
+  var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
+  var from = new Date(Math.max(parseIso_(CFG.HISTORY_START).getTime(),
+                               addDays_(mature, -(CFG.RECOMPUTE_DAYS - 1)).getTime()));
+  if (from > mature) throw new Error('Окно пусто (проверь BUFFER/HISTORY_START)');
+  refreshRange_(from, mature, null, 'daily refresh');
+}
+
+// БЭКФИЛЛ ИСТОРИИ: гонит кусками по CHUNK_DAYS от свежего к старому, пока не дойдёт до HISTORY_START.
+// Запускать руками, возможно НЕСКОЛЬКО РАЗ (лимит 6 мин/запуск) — каждый кусок коммитится,
+// повторный запуск продолжает с места остановки. Готово, когда в логе «Бэкфилл завершён».
+function backfillHistory() {
+  var started = Date.now();
+  var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
+  var histStart = parseIso_(CFG.HISTORY_START);
+  for (var i = 0; i < 12; i++) {
+    if (Date.now() - started > 4.5 * 60 * 1000) { Logger.log('⏳ Время на исходе — запусти backfillHistory ещё раз'); return; }
+    var exDaily = ghGetJson_(CFG.PATH_DAILY);
+    var rows = (exDaily && exDaily.json.rows) || [];
+    var missingEnd = rows.length ? addDays_(parseIso_(rows[0].landing_day), -1) : mature;
+    if (missingEnd < histStart) { Logger.log('✅ Бэкфилл завершён: история с %s', rows.length ? rows[0].landing_day : '—'); return; }
+    var chunkFrom = new Date(Math.max(histStart.getTime(), addDays_(missingEnd, -(CFG.CHUNK_DAYS - 1)).getTime()));
+    var scanTo = new Date(Math.min(mature.getTime(), addDays_(missingEnd, CFG.CHUNK_LOOKAHEAD).getTime()));
+    refreshRange_(chunkFrom, missingEnd, scanTo, 'backfill');
+  }
+  Logger.log('⏳ 12 кусков за прогон — запусти backfillHistory ещё раз, если не увидела «завершён»');
+}
+
+// Точечный пересчёт произвольного диапазона (руками), напр. backfillRange('2026-06-21','2026-07-07')
+function backfillRange(fromIso, toIso) {
+  var to = parseIso_(toIso);
+  var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
+  var scanTo = new Date(Math.min(mature.getTime(), addDays_(to, CFG.CHUNK_LOOKAHEAD).getTime()));
+  refreshRange_(parseIso_(fromIso), to, scanTo, 'range refresh');
 }
 
 // Создать ежедневный триггер (запустить ОДИН раз; повторный запуск пересоздаст)
