@@ -1,11 +1,22 @@
 {
- "generated_at": "2026-07-22T00:00:00Z",
- "seed": true,
+ "generated_at": "2026-07-22T15:30:38Z",
+ "history_start": "2026-06-21",
  "window": {
-  "from": "2026-06-21",
+  "from": "2026-06-20",
   "to": "2026-07-20"
  },
  "rows": [
+  {
+   "landing_day": "2026-06-20",
+   "landing": 1318,
+   "product": 804,
+   "reg_popup": 629,
+   "registration": 340,
+   "paywall": 323,
+   "purchase": 5,
+   "purchase_onetime": 3,
+   "purchase_sub": 2
+  },
   {
    "landing_day": "2026-06-21",
    "landing": 9761,
@@ -14,8 +25,8 @@
    "registration": 2719,
    "paywall": 2577,
    "purchase": 56,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 50,
+   "purchase_sub": 14
   },
   {
    "landing_day": "2026-06-22",
@@ -25,8 +36,8 @@
    "registration": 2325,
    "paywall": 2194,
    "purchase": 41,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 39,
+   "purchase_sub": 8
   },
   {
    "landing_day": "2026-06-23",
@@ -36,8 +47,8 @@
    "registration": 2306,
    "paywall": 2162,
    "purchase": 37,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 30,
+   "purchase_sub": 8
   },
   {
    "landing_day": "2026-06-24",
@@ -47,8 +58,8 @@
    "registration": 2391,
    "paywall": 2216,
    "purchase": 35,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 32,
+   "purchase_sub": 7
   },
   {
    "landing_day": "2026-06-25",
@@ -58,8 +69,8 @@
    "registration": 2605,
    "paywall": 2454,
    "purchase": 43,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 36,
+   "purchase_sub": 9
   },
   {
    "landing_day": "2026-06-26",
@@ -69,8 +80,8 @@
    "registration": 2414,
    "paywall": 2277,
    "purchase": 42,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 39,
+   "purchase_sub": 9
   },
   {
    "landing_day": "2026-06-27",
@@ -80,8 +91,8 @@
    "registration": 2500,
    "paywall": 2334,
    "purchase": 43,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 38,
+   "purchase_sub": 12
   },
   {
    "landing_day": "2026-06-28",
@@ -91,8 +102,8 @@
    "registration": 2814,
    "paywall": 2643,
    "purchase": 57,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 50,
+   "purchase_sub": 14
   },
   {
    "landing_day": "2026-06-29",
@@ -102,8 +113,8 @@
    "registration": 2706,
    "paywall": 2554,
    "purchase": 46,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 42,
+   "purchase_sub": 9
   },
   {
    "landing_day": "2026-06-30",
@@ -113,8 +124,8 @@
    "registration": 2551,
    "paywall": 2393,
    "purchase": 42,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 37,
+   "purchase_sub": 7
   },
   {
    "landing_day": "2026-07-01",
@@ -124,8 +135,8 @@
    "registration": 2570,
    "paywall": 2413,
    "purchase": 54,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 48,
+   "purchase_sub": 13
   },
   {
    "landing_day": "2026-07-02",
@@ -135,8 +146,8 @@
    "registration": 2846,
    "paywall": 2655,
    "purchase": 71,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 66,
+   "purchase_sub": 10
   },
   {
    "landing_day": "2026-07-03",
@@ -146,8 +157,8 @@
    "registration": 2775,
    "paywall": 2562,
    "purchase": 55,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 50,
+   "purchase_sub": 8
   },
   {
    "landing_day": "2026-07-04",
@@ -157,8 +168,8 @@
    "registration": 3140,
    "paywall": 2871,
    "purchase": 68,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 63,
+   "purchase_sub": 13
   },
   {
    "landing_day": "2026-07-05",
@@ -168,8 +179,8 @@
    "registration": 3199,
    "paywall": 2920,
    "purchase": 71,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 66,
+   "purchase_sub": 12
   },
   {
    "landing_day": "2026-07-06",
@@ -179,8 +190,8 @@
    "registration": 3126,
    "paywall": 2852,
    "purchase": 50,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 46,
+   "purchase_sub": 8
   },
   {
    "landing_day": "2026-07-07",
@@ -190,8 +201,8 @@
    "registration": 3503,
    "paywall": 3225,
    "purchase": 82,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 73,
+   "purchase_sub": 13
   },
   {
    "landing_day": "2026-07-08",
@@ -201,8 +212,8 @@
    "registration": 3241,
    "paywall": 2958,
    "purchase": 88,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 81,
+   "purchase_sub": 21
   },
   {
    "landing_day": "2026-07-09",
@@ -212,8 +223,8 @@
    "registration": 2199,
    "paywall": 1935,
    "purchase": 45,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 43,
+   "purchase_sub": 5
   },
   {
    "landing_day": "2026-07-10",
@@ -223,8 +234,8 @@
    "registration": 2316,
    "paywall": 2092,
    "purchase": 41,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 35,
+   "purchase_sub": 7
   },
   {
    "landing_day": "2026-07-11",
@@ -234,8 +245,8 @@
    "registration": 2277,
    "paywall": 2018,
    "purchase": 28,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 27,
+   "purchase_sub": 5
   },
   {
    "landing_day": "2026-07-12",
@@ -245,8 +256,8 @@
    "registration": 2334,
    "paywall": 2076,
    "purchase": 32,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 29,
+   "purchase_sub": 7
   },
   {
    "landing_day": "2026-07-13",
@@ -256,8 +267,8 @@
    "registration": 2190,
    "paywall": 1951,
    "purchase": 27,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 24,
+   "purchase_sub": 5
   },
   {
    "landing_day": "2026-07-14",
@@ -267,8 +278,8 @@
    "registration": 2107,
    "paywall": 1870,
    "purchase": 35,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 32,
+   "purchase_sub": 6
   },
   {
    "landing_day": "2026-07-15",
@@ -278,8 +289,8 @@
    "registration": 2045,
    "paywall": 1788,
    "purchase": 27,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 25,
+   "purchase_sub": 3
   },
   {
    "landing_day": "2026-07-16",
@@ -289,8 +300,8 @@
    "registration": 2087,
    "paywall": 1823,
    "purchase": 25,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 24,
+   "purchase_sub": 4
   },
   {
    "landing_day": "2026-07-17",
@@ -300,8 +311,8 @@
    "registration": 2650,
    "paywall": 2172,
    "purchase": 59,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 50,
+   "purchase_sub": 10
   },
   {
    "landing_day": "2026-07-18",
@@ -311,8 +322,8 @@
    "registration": 2959,
    "paywall": 2450,
    "purchase": 101,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 97,
+   "purchase_sub": 7
   },
   {
    "landing_day": "2026-07-19",
@@ -322,8 +333,8 @@
    "registration": 2837,
    "paywall": 2351,
    "purchase": 70,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 65,
+   "purchase_sub": 5
   },
   {
    "landing_day": "2026-07-20",
@@ -333,8 +344,8 @@
    "registration": 2214,
    "paywall": 1768,
    "purchase": 59,
-   "purchase_onetime": null,
-   "purchase_sub": null
+   "purchase_onetime": 56,
+   "purchase_sub": 4
   }
  ]
 }
