@@ -86,6 +86,7 @@ function dailySql_(loYmd, hiYmd) {
 "  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
 "  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
+"    AND IFNULL(device.web_info.hostname,'') != 'stage.overchat.ai'\n" +
 ")\n" +
 ", base AS (\n" +
 "  SELECT user_pseudo_id, ts, step FROM (\n" +
@@ -94,15 +95,15 @@ function dailySql_(loYmd, hiYmd) {
 "        WHEN event_name='page_view'\n" +
 "             AND REGEXP_CONTAINS(pl, r'overchat\\.ai/(?:[a-z]{2}(?:-[a-z]{2})?/)?(?:image|video|text|chat|models)/') THEN 'landing'\n" +
 "        WHEN event_name='page_view' AND pl LIKE '%/web/%' THEN 'product'\n" +
-"        WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lab='sign up view' THEN 'reg_popup'\n" +
+"        -- 'get stars view' = ЛЕГАСИ-имя рег-попапа до ~середины июня 2026 (rename), НЕ пейволл\n" +
+"        WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lab IN ('sign up view','get stars view') THEN 'reg_popup'\n" +
 "        WHEN event_name='overchat' AND cat='login' AND act='registration' THEN 'registration'\n" +
 "        WHEN event_name='overchat' AND cat='chat' AND act='pop-up'\n" +
-"             AND lab IN ('get feature view','get stars view','credits paywall view') THEN 'paywall'\n" +
+"             AND lab IN ('get feature view','credits paywall view') THEN 'paywall'\n" +
 "        WHEN event_name='purchase_onetime' THEN 'buy_onetime'\n" +
 "        WHEN event_name='subscription_started' THEN 'buy_sub'\n" +
 "      END AS step\n" +
 "    FROM raw\n" +
-"    WHERE pl IS NULL OR LOWER(pl) NOT LIKE '%stage.overchat%'\n" +
 "  )\n" +
 "  WHERE step IS NOT NULL\n" +
 ")\n" +
@@ -144,8 +145,9 @@ function purchasesSql_(loYmd, hiYmd) {
 "  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
 "    AND event_name IN ('purchase_onetime','subscription_started')\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
+"    AND IFNULL(device.web_info.hostname,'') != 'stage.overchat.ai'\n" +
 ")\n" +
-", purf AS (SELECT * FROM pur WHERE pl IS NULL OR LOWER(pl) NOT LIKE '%stage.overchat%')\n" +
+", purf AS (SELECT * FROM pur)\n" +
 "SELECT SUBSTR(TO_HEX(MD5(user_pseudo_id)), 1, 12) AS uid,\n" +
 "  ARRAY_AGG(IF(event_name='purchase_onetime',     CAST(DIV(ts,1000000) AS INT64), NULL) IGNORE NULLS ORDER BY ts) AS o,\n" +
 "  ARRAY_AGG(IF(event_name='subscription_started', CAST(DIV(ts,1000000) AS INT64), NULL) IGNORE NULLS ORDER BY ts) AS s\n" +
