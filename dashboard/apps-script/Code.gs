@@ -698,6 +698,18 @@ function buildWidgetLooksmax_() {
 
   var out = { generated_at: stamp, key: 'looksmax', name: 'looksmax', track_from: LM_TRACK_FROM,
     dev_split: true, dates: dates, series: series,
+    funnel_steps: [['land','Визит лендинга','teal'],['prod','Открыл продукт','teal'],
+      ['quiz_start','Квиз: старт','teal'],['quiz_scan','Квиз: дошёл до скана','teal'],
+      ['photo_front','Загрузил фото анфас','teal'],['photo_side','Загрузил фото профиль','teal'],
+      ['gen','Нажал генерацию','teal'],['wall','Увидел рега-стену','teal'],
+      ['reg','Зарегался (≤24ч)','teal'],['scan_ok','Скан готов','teal'],
+      ['teaser','Увидел тизер','teal'],['unlock','Кликнул лок в тизере','amber'],
+      ['pay_view','Увидел пейволл','amber'],['buy','Купил (однораз+подписка)','violet'],
+      ['full','Открыл полный отчёт','violet'],['plan','Пользуется планом глоу-апа','violet']],
+    funnel_hint: 'Дневные уники по каждому шагу, суммированные за период · «% пред» = конверсия с предыдущего шага. ' +
+      'Шаги могут превышать 100% (сверено с кодом продукта): ~19% юзеров попадают на скан МИМО экрана квиза — ' +
+      'лендинг-хэндофф и возврат после реги автозапускают скан (легитимные пути, не баг); «загрузил фото» включает ' +
+      'авто-restore фото после редиректов и повторные загрузки — слегка раздут.',
     quiz_order: ['gender','age','fix','bugs','holdback','mirrors','rate','gap','growth','math','ratio','ascended','scan'],
     quiz: quiz, unlocks: unlocks, unlock_buys: unlockBuys,
     src: src, src_buy: srcBuy, ttb: ttb,
@@ -705,6 +717,169 @@ function buildWidgetLooksmax_() {
   var ex = ghGetJson_('dashboard/data/widget_looksmax.json');
   ghPutFile_('dashboard/data/widget_looksmax.json', JSON.stringify(out), 'data: looksmax detail refresh', ex && ex.sha);
   Logger.log('looksmax detail: %s дней, %s переходов', dates.length, out.trans.length);
+}
+
+// ---------------------------------------------------------------------------
+// ДЕТАЛКА ВИДЖЕТА ai-rate-my-face → dashboard/data/widget_ai-rate-my-face.json
+// Воронка: лендинг → продукт → загрузка фото → рега-стена (sign up view) → рега →
+// пейволл (get feature view) → last-chance → покупка → генерация (после оплаты).
+// Базовый CTE переиспользуем из looksmax (lmBaseCte_ — универсальный: dv/cat/act/lbl/pl/ref).
+var RMF_PAGE = "overchat[.]ai/web/ai-rate-my-face([/?#]|$)";
+var RMF_LAND = "overchat[.]ai/(?:image|video|text|chat|models)/rate-my-face([/?#]|$)";
+var RMF_TRANS_MAP = {
+  'promo:looksmax-hero': ['looksmax (hero)', 'looksmax', 'модалка'],
+  'promo:looksmax': ['looksmax', 'looksmax', 'модалка'],
+  'promo:style-analysis-color': ['style-analysis: color', 'ai-style-analysis', 'модалка'],
+  'promo:style-analysis-makeup': ['style-analysis: makeup', 'ai-style-analysis', 'модалка'],
+  'promo:style-analysis-hairstyle': ['style-analysis: hairstyle', 'ai-style-analysis', 'модалка'],
+  'promo:style-analysis-style': ['style-analysis: style', 'ai-style-analysis', 'модалка'],
+  'promo:ai-soulmate': ['soulmate', 'ai-soulmate', 'модалка'],
+  'promo:browse-catalog': ['каталог', '', 'модалка']
+};
+function rmfBuysCte_() {
+  return ", rmfbuys AS (SELECT user_pseudo_id, ts, event_name, dv FROM lmbase\n" +
+"  WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "'))";
+}
+function rmfMetricsSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", m AS (SELECT d, dv, user_pseudo_id, CASE\n" +
+"    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + RMF_LAND + "') THEN 'land'\n" +
+"    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'prod'\n" +
+"    WHEN event_name='upload-attempt' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'upload'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='sign up view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'wall'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='get feature view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'pay_view'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='last chance view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'lastchance'\n" +
+"    WHEN event_name='purchase_onetime' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'buy_ot'\n" +
+"    WHEN event_name='subscription_started' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'buy_sub'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='request' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'genreq'\n" +
+"    WHEN event_name='overchat' AND cat='rate-my-face-post-onboarding' AND act='impression' THEN 'promo_imp'\n" +
+"    WHEN event_name='overchat' AND cat='rate-my-face-post-onboarding' AND STARTS_WITH(act,'cta-') THEN 'promo_click'\n" +
+"  END AS metric FROM lmbase)\n" +
+"SELECT metric, IFNULL(dv,'a') AS dvx, d, COUNT(DISTINCT user_pseudo_id) AS u\n" +
+"FROM m WHERE metric IS NOT NULL GROUP BY GROUPING SETS ((metric, dv, d), (metric, d))";
+}
+function rmfRegSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", wall AS (SELECT user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='sign up view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') GROUP BY 1,2)\n" +
+", regs AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbase WHERE event_name='overchat' AND cat='login' AND act='registration' GROUP BY 1)\n" +
+"SELECT IFNULL(w.dv,'a') AS dvx, w.d,\n" +
+"  COUNT(DISTINCT IF(r.ts >= w.ts AND r.ts <= w.ts + 86400*1000000, w.user_pseudo_id, NULL)) AS reg_u\n" +
+"FROM wall w LEFT JOIN regs r USING(user_pseudo_id) GROUP BY GROUPING SETS ((w.dv, w.d), (w.d))";
+}
+function rmfCohSql_(scanLo, hi, cohLo) {
+  return "WITH " + excludedCte_(scanLo, hi) + lmBaseCte_(scanLo, hi) + "\n" +
+", allbuys AS (SELECT user_pseudo_id, ts, event_name, dv, REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug\n" +
+"  FROM lmbase WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/'))\n" +
+", firstot AS (SELECT user_pseudo_id, ARRAY_AGG(STRUCT(pslug, ts, dv, CAST(DATE(TIMESTAMP_MICROS(ts)) AS STRING) AS d) ORDER BY ts LIMIT 1)[OFFSET(0)] AS f\n" +
+"  FROM allbuys WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
+", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM allbuys WHERE event_name='subscription_started' GROUP BY 1)\n" +
+"SELECT IFNULL(fo.f.dv,'a') AS dvx, fo.f.d AS d, COUNT(DISTINCT fo.user_pseudo_id) AS c,\n" +
+"  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts, fo.user_pseudo_id, NULL)) AS w\n" +
+"FROM firstot fo LEFT JOIN subs s USING(user_pseudo_id)\n" +
+"WHERE fo.f.pslug='ai-rate-my-face' AND (s.sub_ts IS NULL OR s.sub_ts > fo.f.ts) AND fo.f.d >= '" + cohLo + "'\n" +
+"GROUP BY GROUPING SETS ((fo.f.dv, fo.f.d), (fo.f.d))";
+}
+function rmfSrcSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + rmfBuysCte_() + "\n" +
+", lands AS (SELECT user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv, CASE\n" +
+"    WHEN REGEXP_CONTAINS(pl, r'[?&](gclid|gbraid|wbraid|fbclid|ttclid)=')\n" +
+"      OR REGEXP_CONTAINS(LOWER(IFNULL(REGEXP_EXTRACT(pl, r'[?&]utm_medium=([^&#]+)'),'')), r'cpc|paid|ppc') THEN 'paid'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'chatgpt|perplexity|claude[.]ai|gemini|copilot') THEN 'ai'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'overchat[.]ai') THEN 'internal'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'tiktok|instagram|facebook|youtube|t[.]co/|reddit|pinterest|vk[.]com') THEN 'social'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'google[.]|bing[.]|yandex|duckduckgo|brave|ecosia|yahoo|ya[.]ru|coccoc|search[.]') THEN 'organic'\n" +
+"    WHEN ref IS NULL OR ref='' THEN 'direct' ELSE 'other' END AS ch\n" +
+"  FROM lmbase WHERE event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + RMF_LAND + "')\n" +
+"  GROUP BY user_pseudo_id, d, ch)\n" +
+"SELECT l.ch, IFNULL(l.dv,'a') AS dvx, l.d, COUNT(DISTINCT l.user_pseudo_id) AS u,\n" +
+"  COUNT(DISTINCT IF(b.user_pseudo_id IS NOT NULL, l.user_pseudo_id, NULL)) AS bu\n" +
+"FROM lands l LEFT JOIN rmfbuys b ON b.user_pseudo_id=l.user_pseudo_id AND b.ts>l.ts AND b.ts<=l.ts+86400*1000000\n" +
+"GROUP BY GROUPING SETS ((l.ch, l.dv, l.d), (l.ch, l.d))";
+}
+function rmfTtbSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + rmfBuysCte_() + "\n" +
+", firstprod AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbase\n" +
+"  WHERE event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') GROUP BY 1)\n" +
+", firstbuy AS (SELECT user_pseudo_id, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM rmfbuys GROUP BY 1)\n" +
+"SELECT CAST(DATE(TIMESTAMP_MICROS(fb.ts)) AS STRING) AS d, fb.dv, ROUND((fb.ts-fp.ts)/60000000,1) AS diff_min\n" +
+"FROM firstbuy fb JOIN firstprod fp USING(user_pseudo_id) WHERE fb.ts >= fp.ts";
+}
+function rmfTransSql_(lo, hi) {
+  var t = [];
+  Object.keys(RMF_TRANS_MAP).forEach(function (s) {
+    if (RMF_TRANS_MAP[s][1]) t.push("STRUCT('" + s + "' AS src,'" + RMF_TRANS_MAP[s][1] + "' AS tp)");
+  });
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", clicks AS (SELECT user_pseudo_id, ts, d, dv, 'promo:'||SUBSTR(act,5) AS src FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='rate-my-face-post-onboarding' AND STARTS_WITH(act,'cta-'))\n" +
+", tgt AS (SELECT * FROM UNNEST([" + t.join(',') + "]))\n" +
+", buys AS (SELECT user_pseudo_id, ts, event_name, REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug\n" +
+"  FROM lmbase WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/'))\n" +
+", fc AS (SELECT src, user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM clicks GROUP BY 1,2,3)\n" +
+"SELECT fc.src, IFNULL(fc.dv,'a') AS dvx, fc.d, COUNT(DISTINCT fc.user_pseudo_id) AS u,\n" +
+"  COUNT(DISTINCT IF(b.event_name='purchase_onetime' AND b.pslug=t.tp, fc.user_pseudo_id, NULL)) AS bt_ot,\n" +
+"  COUNT(DISTINCT IF(b.event_name='subscription_started' AND b.pslug=t.tp, fc.user_pseudo_id, NULL)) AS bt_sub,\n" +
+"  COUNT(DISTINCT IF(b.event_name='purchase_onetime' AND b.pslug!='ai-rate-my-face', fc.user_pseudo_id, NULL)) AS ba_ot,\n" +
+"  COUNT(DISTINCT IF(b.event_name='subscription_started' AND b.pslug!='ai-rate-my-face', fc.user_pseudo_id, NULL)) AS ba_sub\n" +
+"FROM fc LEFT JOIN tgt t ON t.src=fc.src\n" +
+"LEFT JOIN buys b ON b.user_pseudo_id=fc.user_pseudo_id AND b.ts>fc.ts AND b.ts<=fc.ts+14*86400*1000000\n" +
+"GROUP BY GROUPING SETS ((fc.src, fc.dv, fc.d), (fc.src, fc.d))";
+}
+function buildWidgetRMF_() {
+  var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
+  var startDate = parseIso_('2026-06-01');
+  var cap = addDays_(mature, -89);
+  if (cap > startDate) startDate = cap;
+  var lo = ymd_(startDate), hi = ymd_(mature);
+  var dates = [];
+  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
+  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
+  function zeros() { return dates.map(function () { return 0; }); }
+  function tri() { return { a: zeros(), m: zeros(), d: zeros() }; }
+  function put(obj, r, field) { if (obj[r.dvx] && di[r.d] != null) obj[r.dvx][di[r.d]] = r[field]; }
+
+  var SKEYS = ['land','prod','upload','wall','reg','pay_view','lastchance','buy_ot','buy_sub','genreq','coh','upg','promo_imp','promo_click'];
+  var series = {}; SKEYS.forEach(function (k) { series[k] = tri(); });
+  bqQuery_(rmfMetricsSql_(lo, hi)).forEach(function (r) { if (series[r.metric]) put(series[r.metric], r, 'u'); });
+  bqQuery_(rmfRegSql_(lo, hi)).forEach(function (r) { put(series.reg, r, 'reg_u'); });
+  var scanLo = ymd_(addDays_(startDate, -14));
+  bqQuery_(rmfCohSql_(scanLo, hi, iso_(startDate))).forEach(function (r) { put(series.coh, r, 'c'); put(series.upg, r, 'w'); });
+  var src = {}, srcBuy = {};
+  bqQuery_(rmfSrcSql_(lo, hi)).forEach(function (r) {
+    if (!src[r.ch]) { src[r.ch] = tri(); srcBuy[r.ch] = tri(); }
+    put(src[r.ch], r, 'u'); put(srcBuy[r.ch], r, 'bu');
+  });
+  var ttb = [];
+  bqQuery_(rmfTtbSql_(lo, hi)).forEach(function (r) { if (di[r.d] != null) ttb.push([di[r.d], Number(r.diff_min), r.dv]); });
+  ttb.sort(function (x, y) { return x[0] - y[0] || x[1] - y[1]; });
+  var tr = {};
+  bqQuery_(rmfTransSql_(lo, hi)).forEach(function (r) {
+    if (!tr[r.src]) {
+      var m = RMF_TRANS_MAP[r.src] || [r.src, '', '?'];
+      tr[r.src] = { src: r.src, label: m[0], target: m[1], place: m[2],
+        u: tri(), bt_ot: tri(), bt_sub: tri(), ba_ot: tri(), ba_sub: tri() };
+    }
+    ['u','bt_ot','bt_sub','ba_ot','ba_sub'].forEach(function (f) { put(tr[r.src][f], r, f); });
+  });
+  var out = { generated_at: stamp, key: 'ai-rate-my-face', name: 'rate-my-face', track_from: '2026-06-01',
+    dev_split: true, dates: dates, series: series,
+    funnel_steps: [['land','Визит лендинга','teal'],['prod','Открыл продукт','teal'],
+      ['upload','Загрузил фото','teal'],['wall','Увидел рега-стену','teal'],
+      ['reg','Зарегался (≤24ч)','teal'],['pay_view','Увидел пейволл','amber'],
+      ['lastchance','Увидел last-chance оффер','amber'],['buy','Купил (однораз+подписка)','violet'],
+      ['genreq','Запросил генерацию','violet']],
+    funnel_hint: 'Дневные уники по каждому шагу, суммированные за период · «% пред» = конверсия с предыдущего шага. ' +
+      'Шаги идут в эмпирическом порядке (по средней позиции события). «Увидел рега-стену» может превышать «загрузил фото» — ' +
+      'поп-ап логина показывается и без загрузки фото; трекинг sign-up-попапа занижен на ~15–20% (баг фронта). ' +
+      '⚠️ Событие «загрузил фото» (upload-attempt) массово залогировалось только с 13.07 — до этой даты шаг сильно занижен, ' +
+      'смотри его с 13.07. Генерация идёт ПОСЛЕ покупки — полный рейтинг разблокируется оплатой.',
+    src: src, src_buy: srcBuy, ttb: ttb,
+    trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
+  var ex = ghGetJson_('dashboard/data/widget_ai-rate-my-face.json');
+  ghPutFile_('dashboard/data/widget_ai-rate-my-face.json', JSON.stringify(out), 'data: rate-my-face detail refresh', ex && ex.sha);
+  Logger.log('rate-my-face detail: %s дней, %s переходов', dates.length, out.trans.length);
 }
 
 // ГЛАВНАЯ: запускать ежедневно — пересчитывает последние RECOMPUTE_DAYS зрелых дней
@@ -716,6 +891,7 @@ function runDaily() {
   refreshRange_(from, mature, null, 'daily refresh');
   try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
   try { buildWidgetLooksmax_(); } catch (e) { Logger.log('looksmax detail error: ' + e); }
+  try { buildWidgetRMF_(); } catch (e) { Logger.log('rate-my-face detail error: ' + e); }
 }
 
 // БЭКФИЛЛ ИСТОРИИ: гонит кусками по CHUNK_DAYS от свежего к старому, пока не дойдёт до HISTORY_START.
