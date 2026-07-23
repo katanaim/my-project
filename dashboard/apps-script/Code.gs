@@ -911,6 +911,15 @@ function apMetricsSql_(lo, hi) {
 "SELECT metric, IFNULL(dv,'a') AS dvx, d, COUNT(DISTINCT user_pseudo_id) AS u\n" +
 "FROM m WHERE metric IS NOT NULL GROUP BY GROUPING SETS ((metric, dv, d), (metric, d))";
 }
+// объединённый гейт: юзер увидел рега-стену ИЛИ пейволл на продукте (разные гейты для разных состояний логина)
+function apGateSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", g AS (SELECT user_pseudo_id, dv, d FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl IN ('sign up view','get feature view')\n" +
+"    AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "'))\n" +
+"SELECT IFNULL(dv,'a') AS dvx, d, COUNT(DISTINCT user_pseudo_id) AS u\n" +
+"FROM g GROUP BY GROUPING SETS ((dv, d), (d))";
+}
 function apRegSql_(lo, hi) {
   return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
 ", wall AS (SELECT user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM lmbase\n" +
@@ -992,10 +1001,11 @@ function buildWidgetAP_() {
   function tri() { return { a: zeros(), m: zeros(), d: zeros() }; }
   function put(obj, r, field) { if (obj[r.dvx] && di[r.d] != null) obj[r.dvx][di[r.d]] = r[field]; }
 
-  var SKEYS = ['land','fr_upload','fr_gen','prod','wall','reg','pay_view','lastchance','buy_ot','buy_sub','genreq','coh','upg'];
+  var SKEYS = ['land','fr_upload','fr_gen','prod','wall','reg','pay_view','lastchance','buy_ot','buy_sub','genreq','coh','upg','gate'];
   var series = {}; SKEYS.forEach(function (k) { series[k] = tri(); });
   bqQuery_(apMetricsSql_(lo, hi)).forEach(function (r) { if (series[r.metric]) put(series[r.metric], r, 'u'); });
   bqQuery_(apRegSql_(lo, hi)).forEach(function (r) { put(series.reg, r, 'reg_u'); });
+  bqQuery_(apGateSql_(lo, hi)).forEach(function (r) { put(series.gate, r, 'u'); });
   var scanLo = ymd_(addDays_(startDate, -14));
   bqQuery_(apCohSql_(scanLo, hi, iso_(startDate))).forEach(function (r) { put(series.coh, r, 'c'); put(series.upg, r, 'w'); });
   var src = {}, srcBuy = {};
@@ -1017,15 +1027,15 @@ function buildWidgetAP_() {
   });
   var out = { generated_at: stamp, key: 'ai-add-person-to-photo', name: 'add-person-to-photo', track_from: '2026-06-01',
     dev_split: true, dates: dates, series: series,
-    funnel_steps: [['land','Визит лендинга','teal'],['fr_upload','Загрузил фото (виджет лендинга)','teal'],
-      ['fr_gen','Нажал генерацию','teal'],['prod','Открыл продукт','teal'],
-      ['wall','Увидел рега-стену','teal'],['reg','Зарегался (≤24ч)','teal'],
-      ['pay_view','Увидел пейволл','amber'],['lastchance','Увидел last-chance оффер','amber'],
-      ['buy','Купил (однораз+подписка)','violet'],['genreq','Запросил генерацию','violet']],
-    funnel_hint: 'Дневные уники по каждому шагу за период · «% пред» = конверсия с предыдущего шага. Онбординг живёт в виджете ' +
-      'на лендинге (ai_add_person_to_photo, загрузка+генерация) — запущен 09.07, поэтому до этой даты эти два шага пустые, смотри их с 09.07. ' +
-      'Виджет — один из путей входа (часть юзеров кликает в продукт напрямую), шаги могут быть ниже визитов. Рега-стена (sign up view) занижена ' +
-      'трекингом ~15–20%. Генерация идёт ПОСЛЕ покупки — результат разблокируется оплатой.',
+    funnel_steps: [['land','Визит лендинга','teal'],['prod','Открыл продукт','teal'],
+      ['gate','Дошёл до гейта (рега-стена или пейволл)','amber'],
+      ['reg','Зарегался (≤24ч)','teal'],['buy','Купил (однораз+подписка)','violet']],
+    funnel_hint: 'Дневные уники по каждому шагу за период · «% пред» = конверсия с предыдущего шага (теперь монотонно). ' +
+      '«Гейт» = юзер увидел рега-стену ИЛИ пейволл — они объединены, потому что это разные гейты для разных людей: ' +
+      'залогиненные видят пейволл минуя регистрацию, разлогиненные — рега-стену (на add-person ~половина уже залогинены). ' +
+      'Онбординг-виджет на лендинге (загрузка+генерация, запущен 09.07) — ОПЦИОНАЛЬНЫЙ путь входа (им пользуется ~треть), ' +
+      'поэтому в основную воронку не входит; его шаги и регистрацию смотри в KPI и разрезе устройств. ' +
+      'Рега-стена занижена трекингом ~15–20%. Покупка → генерация результата разблокируется оплатой.',
     src: src, src_buy: srcBuy, ttb: ttb,
     trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
   var ex = ghGetJson_('dashboard/data/widget_ai-add-person-to-photo.json');
