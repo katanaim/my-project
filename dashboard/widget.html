@@ -137,7 +137,7 @@
   <div class="two">
     <div class="panel" id="dev_p" hidden>
       <h2>Мобайл vs десктоп</h2>
-      <div class="hint">Ключевые шаги по устройствам за период · % = от «открыл продукт» своего устройства</div>
+      <div class="hint">Ключевые шаги по устройствам · «покупка %» = доля купивших ИЗ ТЕХ, КТО ОТКРЫЛ ПРОДУКТ (не из визитов лендинга — устройство известно только внутри продукта)</div>
       <div id="devs"></div>
     </div>
     <div class="panel" id="ttb_p" hidden>
@@ -318,7 +318,7 @@ function render(){
     ["визиты лендинга", fmt(g("land")), "", "teal", pill(dp(g("land"),gp("land")),"%",0,sigCount(g("land"),gp("land")))],
     ["открыли продукт", fmt(g("prod")), pcs(g("prod"),g("land"))+" от лендинга", "teal", pill(dp(g("prod"),gp("prod")),"%",0,sigCount(g("prod"),gp("prod")))],
     ["покупки", fmt(buy), fmt(g("buy_ot"))+" однораз / "+fmt(g("buy_sub"))+" подписка", "violet", pill(hasPrev?buy-buyP:null,"",0,sigCount(buy,buyP))],
-    ["продукт → покупка", pcs(buy,g("prod"),2), "", "violet", pill(dpp(buy,g("prod"),buyP,gp("prod")),"п.п.",2,sigProp(buy,g("prod"),buyP,gp("prod")))],
+    ["продукт → покупка", pcs(buy,g("prod"),2), "из открывших продукт", "violet", pill(dpp(buy,g("prod"),buyP,gp("prod")),"п.п.",2,sigProp(buy,g("prod"),buyP,gp("prod")))],
     ["однораз → подписка", coh>0?pcs(upg,coh):"—", coh>0?upg+" из "+coh+" ПЕРВЫХ одноразок":"нет первых одноразок за период", "violet", coh>0?pill((cohP>=10&&coh>=10)?dpp(upg,coh,upgP,cohP):null,"п.п.",1,sigProp(upg,coh,upgP,cohP)):""],
     ["рега после стены", pcs(g("reg"),g("wall")), fmt(g("reg"))+" из "+fmt(g("wall")), "teal", pill(dpp(g("reg"),g("wall"),gp("reg"),gp("wall")),"п.п.",1,sigProp(g("reg"),g("wall"),gp("reg"),gp("wall")))]
   ];
