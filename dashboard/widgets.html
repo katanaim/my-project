@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overchat · Виджеты за неделю</title>
+<style>
+  :root{
+    --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC; --grid:#EDEEE9;
+    --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
+    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --amber-line:#D97706;
+    --band:#B4530910; --good:#15803D; --bad:#B91C1C; --goodbg:#15803D14; --badbg:#B91C1C12;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30; --grid:#262D33;
+    --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
+    --band:#E8A33D14; --good:#4ADE80; --bad:#F87171; --goodbg:#4ADE8018; --badbg:#F8717114;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--surface); color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px; margin:0 auto; padding:36px 22px 64px; display:flex; flex-direction:column; gap:20px}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:28px; margin:6px 0 0; letter-spacing:-.01em}
+  .sub{color:var(--ink-2); margin-top:6px; max-width:76ch; font-size:13.5px}
+  .stamp{font-size:12px; color:var(--ink-3); margin-top:5px}
+  .nav{font-size:13px}
+  .nav a{color:var(--teal); text-decoration:none; font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .num{font-variant-numeric:tabular-nums}
+  .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--card);
+    border:1px solid var(--border); border-radius:12px; padding:10px 14px; position:sticky; top:8px; z-index:5}
+  .controls .lbl{font-size:12px; color:var(--ink-3); font-weight:600; margin-right:2px}
+  .chip{font:inherit; font-size:12px; font-weight:600; color:var(--ink-2); background:var(--surface);
+    border:1px solid var(--border); border-radius:99px; padding:4px 11px; cursor:pointer}
+  .chip:hover{color:var(--ink)}
+  .chip.on{color:var(--surface); background:var(--ink); border-color:var(--ink)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(252px,1fr)); gap:12px}
+  .cardw{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px 16px 13px;
+    display:flex; flex-direction:column; gap:8px; position:relative; overflow:hidden}
+  .cardw .rank{position:absolute; top:11px; right:13px; font-size:11px; color:var(--ink-3); font-weight:600}
+  .cardw .nm{font-size:14.5px; font-weight:680; letter-spacing:-.005em; padding-right:26px; line-height:1.25}
+  .cardw .traffic{font-size:11.5px; color:var(--ink-2)}
+  .hero{display:flex; align-items:baseline; gap:8px; margin-top:2px}
+  .hero .v{font-size:30px; font-weight:680; letter-spacing:-.02em; color:var(--teal); line-height:1}
+  .hero .lbl2{font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; font-weight:600}
+  .pill{font-size:11.5px; font-weight:650; border-radius:99px; padding:2px 8px; white-space:nowrap}
+  .pill.up{color:var(--good); background:var(--goodbg)}
+  .pill.down{color:var(--bad); background:var(--badbg)}
+  .pill.flat{color:var(--ink-3); background:var(--border-soft)}
+  .bar{height:4px; border-radius:2px; background:var(--border-soft); overflow:hidden}
+  .bar i{display:block; height:100%; border-radius:2px; background:var(--teal); opacity:.85}
+  .row{display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color:var(--ink-2); gap:6px}
+  .row b{color:var(--ink); font-weight:650}
+  .row .d{font-size:11px}
+  .row .d.up{color:var(--good)} .row .d.down{color:var(--bad)} .row .d.flat{color:var(--ink-3)}
+  .upgline{border-top:1px solid var(--border-soft); padding-top:7px; margin-top:1px}
+  .muted{color:var(--ink-3)}
+  .lands{font-size:10.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .sec{display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; margin-top:6px}
+  .sec b{font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); font-weight:700}
+  .sec span{font-size:12.5px; color:var(--ink-3)}
+  .err{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:14px 18px; font-size:13.5px; color:var(--ink-2)}
+  .foot{font-size:12px; color:var(--ink-3); line-height:1.6; border-top:1px solid var(--border); padding-top:14px}
+  details summary{cursor:pointer; color:var(--ink-2); font-weight:600; padding:4px 0; font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Overchat · Аналитика виджетов</div>
+    <h1>Виджеты за неделю</h1>
+    <div class="sub" id="sub">Карточки всех виджетов: конверсия визит лендинга → покупка за неделю, сдвиг к прошлой неделе, и апгрейд однораз → подписка внутри юзера (когорта за 4 зрелые недели).</div>
+    <div class="stamp" id="stamp">загрузка…</div>
+    <div class="nav" style="margin-top:8px"><a href="index.html">← Весь продукт по дням</a></div>
+  </header>
+
+  <div class="controls" id="controls" hidden>
+    <span class="lbl">Сортировка:</span>
+    <button class="chip on" data-sort="conv">Конверсия</button>
+    <button class="chip" data-sort="visits">Визиты</button>
+    <button class="chip" data-sort="buys">Покупки</button>
+    <button class="chip" data-sort="upg">Апгрейд</button>
+    <button class="chip" data-sort="delta">Δ недели</button>
+  </div>
+
+  <div id="error"></div>
+  <div class="grid" id="grid"></div>
+
+  <details id="smallwrap" hidden>
+    <summary>Мелкий трафик (&lt;300 визитов/нед) — конверсии дрожат, читать осторожно</summary>
+    <div class="grid" id="grid_small" style="margin-top:10px"></div>
+  </details>
+
+  <div class="foot" id="foot" hidden>
+    <b>Методология.</b> Виджет = продукт-страница + все лендинги, которые в неё ведут (карта строится по фактическим переходам за 28 дней).
+    <b>Конверсия</b> = уники с покупкой на продукт-странице виджета за неделю / уники визита лендингов виджета; сравнение — с предыдущей неделей, в п.п.
+    <b>Онетайм→Подп ≤7д</b> = из юзеров, чья ПЕРВАЯ одноразка куплена на этом виджете (4 зрелые недели), доля оформивших подписку за 7 дней; Δ — к предыдущим 4 неделям; серым — когорты &lt;10 юзеров (шум).
+    Тест-юзеры, стейдж и флуд вычищены. Полоска под конверсией — доля от лидера недели. Деньги-истина — Stripe.
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const fmt=n=>n==null?"—":n.toLocaleString("ru-RU");
+let DATA=null, SORT="conv";
+
+function pct(a,b){ return b>0 ? a/b*100 : null; }
+function enrich(w){
+  w.conv  = pct(w.buys,  w.visits);
+  w.convP = pct(w.buysP, w.visitsP);
+  w.dconv = (w.conv!=null && w.convP!=null) ? w.conv-w.convP : null;
+  w.upg   = w.cohN  >= 10 ? pct(w.upgN,  w.cohN)  : (w.cohN>0 ? pct(w.upgN, w.cohN) : null);
+  w.upgP  = w.cohNP >= 10 ? pct(w.upgNP, w.cohNP) : null;
+  w.dupg  = (w.upg!=null && w.upgP!=null) ? w.upg-w.upgP : null;
+  w.dvis  = w.visitsP>0 ? (w.visits-w.visitsP)/w.visitsP*100 : null;
+  w.dbuys = w.buys - w.buysP;
+  return w;
+}
+function pill(d, unit, dec){
+  if(d==null) return `<span class="pill flat">нет базы</span>`;
+  const cls = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
+  const arrow = cls==="flat" ? "≈" : (d>0?"▲":"▼");
+  return `<span class="pill ${cls}">${arrow} ${d>0?"+":""}${d.toFixed(dec)} ${unit}</span>`;
+}
+function dspan(d, unit, dec){
+  if(d==null) return `<span class="d flat">—</span>`;
+  const cls = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
+  return `<span class="d ${cls}">${d>0?"+":""}${d.toFixed(dec)}${unit}</span>`;
+}
+function card(w, rank, maxConv){
+  const convS = w.conv==null ? "—" : w.conv.toFixed(2)+"%";
+  const barW = (w.conv!=null && maxConv>0) ? Math.max(2, w.conv/maxConv*100) : 0;
+  const upgHtml = w.cohN>0
+    ? (w.cohN>=10
+        ? `однораз→подписка ≤7д: <b>${w.upg.toFixed(1)}%</b> <span class="muted num">(${w.upgN}/${w.cohN})</span> ${dspan(w.dupg,"п.п.",1)}`
+        : `однораз→подписка: <span class="muted num">${w.upgN}/${w.cohN} — мало данных</span>`)
+    : `однораз→подписка: <span class="muted">нет одноразок</span>`;
+  return `<div class="cardw">
+    <div class="rank num">#${rank}</div>
+    <div class="nm">${w.name}</div>
+    <div class="traffic num">${fmt(w.visits)} визитов/нед ${dspan(w.dvis,"%",0)}</div>
+    <div class="hero"><span class="v num">${convS}</span>${pill(w.dconv,"п.п.",2)}</div>
+    <div class="lbl2" style="font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:-4px">визит → покупка</div>
+    <div class="bar"><i style="width:${barW}%"></i></div>
+    <div class="row"><span>покупок: <b class="num">${fmt(w.buys)}</b> <span class="muted num">(${fmt(w.buyOt)}р/${fmt(w.buySub)}п)</span></span>${dspan(w.dbuys,"",0)}</div>
+    <div class="row upgline"><span class="num">${upgHtml}</span></div>
+    <div class="lands" title="${w.landings.join(', ')}">${w.landings.slice(0,3).join(' · ')}${w.landings.length>3?' +'+(w.landings.length-3):''}</div>
+  </div>`;
+}
+function render(){
+  const ws = DATA.widgets.map(enrich);
+  const big = ws.filter(w=>w.visits>=300), small = ws.filter(w=>w.visits<300 && w.visits>0);
+  const key = {
+    conv:  w=>w.conv??-1,
+    visits:w=>w.visits,
+    buys:  w=>w.buys,
+    upg:   w=>(w.cohN>=10 ? w.upg : -1),
+    delta: w=>w.dconv??-999
+  }[SORT];
+  big.sort((a,b)=>key(b)-key(a));
+  small.sort((a,b)=>key(b)-key(a));
+  const maxConv = Math.max(...big.map(w=>w.conv||0));
+  $("grid").innerHTML = big.map((w,i)=>card(w,i+1,maxConv)).join("");
+  $("grid_small").innerHTML = small.map((w,i)=>card(w,i+1,maxConv)).join("");
+  $("smallwrap").hidden = !small.length;
+}
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".chip"); if(!c) return;
+  SORT=c.dataset.sort;
+  document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));
+  render();
+});
+(async()=>{
+  try{
+    const r = await fetch("data/widgets_weekly.json",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    DATA = await r.json();
+    const f=s=>s.slice(5).split("-").reverse().join(".");
+    $("stamp").textContent=`Неделя ${f(DATA.week.from)}–${f(DATA.week.to)} vs ${f(DATA.prev.from)}–${f(DATA.prev.to)} · апгрейд-когорты ${f(DATA.upg_window.from)}–${f(DATA.upg_window.to)} · обновляется ежедневно`;
+    ["controls","foot"].forEach(id=>$(id).hidden=false);
+    render();
+  }catch(err){
+    $("stamp").textContent="";
+    $("error").innerHTML=`<div class="err"><b>Не смог загрузить данные</b> (${err.message}). Файл data/widgets_weekly.json появляется после прогона Apps Script (runDaily) или бэкфилла.</div>`;
+  }
+})();
+</script>
+</body>
+</html>
