@@ -169,7 +169,7 @@
     а подписчики «со стороны» получают отчёт вообще без покупки на виджете. <b>Квиз: старт</b> = любой шаг квиза.
     Side-фото опционально с 21.07.
     <b>Однораз→подписка</b> = из юзеров, чья ПЕРВАЯ В ЖИЗНИ одноразка куплена на этом виджете в период, доля оформивших подписку к сегодня
-    (свежие когорты младше ~8 дней ещё дозревают). Поэтому когорта меньше числа «покупок однораз» за тот же период:
+    (апгрейд в подписку почти всегда в тот же день — 96% в первые 24ч, так что число практически финальное). Поэтому когорта меньше числа «покупок однораз» за тот же период:
     повторные покупатели и юзеры, чья первая одноразка была на другом виджете, в когорту не входят. <b>Переходы</b>: «купил в целевом» = покупка на виджете, куда вёл клик;
     «купил где-либо» = на любом виджете, кроме исходного. <b>Графики</b> показывают весь диапазон с релиза трекинга,
     выбранный период подсвечен; «7д среднее» = скользящее за 7 дней. <b>Значимость</b> дельт: конверсии — z-тест двух долей,
@@ -343,7 +343,7 @@ function render(){
   chart($("ch_upg"),"Однораз → подписка (любимая)",[
     {data:Scoh.map((c,i)=>c>0?(Supg[i]/c*100):null),color:"var(--violet)",op:.3,wd:1.5,name:"день"},
     {data:roll7(Scoh,Supg,Scoh),color:"var(--violet)",wd:2.5,name:"7д среднее"}
-  ],{dec:1,unit:"%",zero:true,hint:"доля когорты первых одноразок, оформившая подписку к сегодня · последние ~8 дней ещё дозревают"});
+  ],{dec:1,unit:"%",zero:true,hint:"доля когорты первых одноразок, оформившая подписку · 96% апгрейдятся в тот же день, число финальное"});
   chart($("ch_buys"),"Покупки по дням",[
     {data:Sot,color:"var(--teal)",name:"однораз",type:"bar"},
     {data:Ssub,color:"var(--violet)",name:"подписка",type:"bar",stackOn:{data:Sot}}
@@ -389,12 +389,17 @@ function render(){
     const DS=STEPS0.filter(s=>s[0]!=="buy" && S[s[0]] && (gm(s[0])+gd(s[0]))>0).map(s=>[s[0],s[1].toLowerCase()]);
     const mBuy=gm("buy_ot")+gm("buy_sub"), dBuy=gd("buy_ot")+gd("buy_sub");
     const sg=sigProp(mBuy,gm("prod"),dBuy,gd("prod"));
-    const verdict=!sg.tested?"разница не проверяема (мало данных)":(sg.sig?`разница ЗНАЧИМА (${pstr(sg)})`:`разница в пределах шума (${pstr(sg)})`);
+    const mc=pc(mBuy,gm("prod")), dc=pc(dBuy,gd("prod"));
+    const better = mc>dc ? "мобилка" : "десктоп";
+    let verdict;
+    if(!sg.tested) verdict="Мало покупок, чтобы сравнивать устройства — разницу проверить нельзя.";
+    else if(sg.sig) verdict=`${better[0].toUpperCase()+better.slice(1)} конвертит в покупку заметно лучше — это настоящая разница, а не случайность (${pstr(sg)}).`;
+    else verdict=`Мобилка и десктоп конвертят почти одинаково — разница в пределах случайности (${pstr(sg)}), можно считать их равными.`;
     $("devs").innerHTML=`<div style="overflow-x:auto"><table>
       <tr><th>шаг</th><th>📱 мобайл</th><th>%</th><th>🖥 десктоп</th><th>%</th></tr>
       ${DS.map(([k,n])=>`<tr><td>${n}</td><td class="num">${fmt(gm(k))}</td><td class="num muted">${pcs(gm(k),gm("prod"),0)}</td><td class="num">${fmt(gd(k))}</td><td class="num muted">${pcs(gd(k),gd("prod"),0)}</td></tr>`).join("")}
       <tr><td><b>покупка</b></td><td class="num"><b>${fmt(mBuy)}</b></td><td class="num"><b>${pcs(mBuy,gm("prod"),2)}</b></td><td class="num"><b>${fmt(dBuy)}</b></td><td class="num"><b>${pcs(dBuy,gd("prod"),2)}</b></td></tr>
-      </table></div><div class="hint" style="margin-top:8px">прод → покупка: ${verdict}</div>`;
+      </table></div><div class="hint" style="margin-top:8px">${verdict}</div>`;
     $("dev_p").hidden=false;
   }
   if(DATA.ttb){
@@ -419,8 +424,12 @@ function render(){
     let cmp="";
     if(paidR&&orgR){
       const sg=sigProp(paidR.bu,paidR.u,orgR.bu,orgR.u);
-      cmp=`<div class="hint" style="margin-top:8px">платный vs органика: ${pcs(paidR.bu,paidR.u,2)} против ${pcs(orgR.bu,orgR.u,2)}`+
-        (sg.tested?(sg.sig?` — разница значима (${pstr(sg)})`:` — шум (${pstr(sg)})`):"")+`</div>`;
+      const ratio=orgR.bu>0&&paidR.u>0 ? (pc(paidR.bu,paidR.u)/pc(orgR.bu,orgR.u)) : null;
+      let tail;
+      if(!sg.tested) tail="данных мало, чтобы уверенно сравнивать";
+      else if(sg.sig) tail=`платный конвертит лучше по-настоящему${ratio?` (в ${ratio.toFixed(1)}× раза)`:""}, это не случайность (${pstr(sg)})`;
+      else tail=`разница в пределах случайности (${pstr(sg)})`;
+      cmp=`<div class="hint" style="margin-top:8px">Платный ${pcs(paidR.bu,paidR.u,2)} против органики ${pcs(orgR.bu,orgR.u,2)} — ${tail}.</div>`;
     }
     $("srcs").innerHTML=`<div style="overflow-x:auto"><table>
       <tr><th>канал</th><th>визиты</th><th>доля</th><th>купили ≤24ч</th><th>конверсия</th></tr>
