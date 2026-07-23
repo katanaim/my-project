@@ -582,13 +582,19 @@ function buildWidgetLooksmax_() {
   function zeros() { return dates.map(function () { return 0; }); }
 
   var SKEYS = ['land','prod','quiz_start','quiz_scan','photo_front','photo_side','gen','wall','reg',
-               'scan_ok','teaser','unlock','pay_view','buy_ot','buy_sub','full','plan','err'];
+               'scan_ok','teaser','unlock','pay_view','buy_ot','buy_sub','full','plan','err','coh','upg'];
   var series = {}; SKEYS.forEach(function (k) { series[k] = zeros(); });
   bqQuery_(lmMetricsSql_(lo, hi)).forEach(function (r) {
     if (series[r.metric] && di[r.d] != null) series[r.metric][di[r.d]] = r.u;
   });
   bqQuery_(lmRegSql_(lo, hi)).forEach(function (r) {
     if (di[r.d] != null) series.reg[di[r.d]] = r.reg_u;
+  });
+  // любимая конверсия: тот же когортный запрос, что кормит карточки виджетов (числа совпадают 1:1)
+  var scanLo = ymd_(addDays_(startDate, -14));
+  bqQuery_(widgetsCohSql_(scanLo, hi, scanLo, hi, iso_(startDate))).forEach(function (r) {
+    if (r.wkey !== 'looksmax' || di[r.d] == null) return;
+    series.coh[di[r.d]] = r.c; series.upg[di[r.d]] = r.w;
   });
   var quiz = {}, unlocks = {};
   bqQuery_(lmQuizSql_(lo, hi)).forEach(function (r) {
