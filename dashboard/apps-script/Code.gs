@@ -489,12 +489,13 @@ var LM_TRANS_MAP = {   // куда ведёт каждый кросс-промо
   'report:Skin Analyzer': ['skin-analyzer', 'ai-skin-analyzer', 'отчёт']
 };
 function lmBaseCte_(loYmd, hiYmd) {
-  return ", lmbase AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name,\n" +
+  return ", lmbase AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name, device.category AS dev,\n" +
 "    CAST(DATE(TIMESTAMP_MICROS(event_timestamp)) AS STRING) AS d,\n" +
 "    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventCategory') AS cat,\n" +
 "    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventAction') AS act,\n" +
 "    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventLabel') AS lbl,\n" +
-"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl,\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_referrer') AS ref\n" +
 "  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
 "  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
@@ -567,6 +568,60 @@ function lmTransSql_(lo, hi) {
 "LEFT JOIN buys b ON b.user_pseudo_id=fc.user_pseudo_id AND b.ts>fc.ts AND b.ts<=fc.ts+14*86400*1000000\n" +
 "GROUP BY 1,2";
 }
+function lmBuysCte_() {
+  return ", lmbuys AS (SELECT user_pseudo_id, ts, event_name FROM lmbase\n" +
+"  WHERE event_name IN ('purchase_onetime','subscription_started')\n" +
+"    AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)'))";
+}
+function lmLockBuySql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + lmBuysCte_() + "\n" +
+", taps AS (SELECT user_pseudo_id, lbl, d, MIN(ts) AS ts FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='looksmax' AND act='unlock-tap' GROUP BY 1,2,3)\n" +
+"SELECT t.lbl, t.d, COUNT(DISTINCT IF(b.user_pseudo_id IS NOT NULL, t.user_pseudo_id, NULL)) AS bu\n" +
+"FROM taps t LEFT JOIN lmbuys b ON b.user_pseudo_id=t.user_pseudo_id AND b.ts>t.ts AND b.ts<=t.ts+86400*1000000\n" +
+"GROUP BY 1,2";
+}
+function lmSrcSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + lmBuysCte_() + "\n" +
+", lands AS (SELECT user_pseudo_id, d, MIN(ts) AS ts, CASE\n" +
+"    WHEN REGEXP_CONTAINS(pl, r'[?&](gclid|gbraid|wbraid|fbclid|ttclid)=')\n" +
+"      OR REGEXP_CONTAINS(LOWER(IFNULL(REGEXP_EXTRACT(pl, r'[?&]utm_medium=([^&#]+)'),'')), r'cpc|paid|ppc') THEN 'paid'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'chatgpt|perplexity|claude[.]ai|gemini|copilot') THEN 'ai'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'overchat[.]ai') THEN 'internal'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'tiktok|instagram|facebook|youtube|t[.]co/|reddit|pinterest|vk[.]com') THEN 'social'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'google[.]|bing[.]|yandex|duckduckgo|brave|ecosia|yahoo|ya[.]ru|coccoc|search[.]') THEN 'organic'\n" +
+"    WHEN ref IS NULL OR ref='' THEN 'direct' ELSE 'other' END AS ch\n" +
+"  FROM lmbase WHERE event_name='page_view'\n" +
+"    AND REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/looksmaxing-ai([/?#]|$)')\n" +
+"  GROUP BY user_pseudo_id, d, ch)\n" +
+"SELECT l.ch, l.d, COUNT(DISTINCT l.user_pseudo_id) AS u,\n" +
+"  COUNT(DISTINCT IF(b.user_pseudo_id IS NOT NULL, l.user_pseudo_id, NULL)) AS bu\n" +
+"FROM lands l LEFT JOIN lmbuys b ON b.user_pseudo_id=l.user_pseudo_id AND b.ts>l.ts AND b.ts<=l.ts+86400*1000000\n" +
+"GROUP BY 1,2";
+}
+function lmDevSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", m AS (SELECT d, user_pseudo_id, IF(dev='mobile','m','d') AS dv, CASE\n" +
+"    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/looksmaxing-ai([/?#]|$)') THEN 'land'\n" +
+"    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'prod'\n" +
+"    WHEN event_name='overchat' AND cat='looksmax' AND act='generate-click' THEN 'gen'\n" +
+"    WHEN event_name='overchat' AND cat='looksmax' AND act='auth-wall-show' THEN 'wall'\n" +
+"    WHEN event_name='overchat' AND cat='looksmax' AND act='report-view' AND lbl='teaser' THEN 'teaser'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='get feature view'\n" +
+"      AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'pay_view'\n" +
+"    WHEN event_name='purchase_onetime' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'buy_ot'\n" +
+"    WHEN event_name='subscription_started' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'buy_sub'\n" +
+"  END AS metric FROM lmbase)\n" +
+"SELECT dv, metric, d, COUNT(DISTINCT user_pseudo_id) AS u FROM m WHERE metric IS NOT NULL GROUP BY 1,2,3";
+}
+function lmTtbSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + lmBuysCte_() + "\n" +
+", firstprod AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbase\n" +
+"  WHERE event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') GROUP BY 1)\n" +
+", firstbuy AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbuys GROUP BY 1)\n" +
+"SELECT CAST(DATE(TIMESTAMP_MICROS(fb.ts)) AS STRING) AS d, ROUND((fb.ts-fp.ts)/60000000,1) AS diff_min\n" +
+"FROM firstbuy fb JOIN firstprod fp USING(user_pseudo_id) WHERE fb.ts >= fp.ts";
+}
 function buildWidgetLooksmax_() {
   var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
@@ -612,10 +667,33 @@ function buildWidgetLooksmax_() {
     tr[r.src].u[i] = r.u; tr[r.src].bt_ot[i] = r.bt_ot; tr[r.src].bt_sub[i] = r.bt_sub;
     tr[r.src].ba_ot[i] = r.ba_ot; tr[r.src].ba_sub[i] = r.ba_sub;
   });
+  var unlockBuys = {};
+  bqQuery_(lmLockBuySql_(lo, hi)).forEach(function (r) {
+    if (!unlockBuys[r.lbl]) unlockBuys[r.lbl] = zeros();
+    if (di[r.d] != null) unlockBuys[r.lbl][di[r.d]] = r.bu;
+  });
+  var src = {}, srcBuy = {};
+  bqQuery_(lmSrcSql_(lo, hi)).forEach(function (r) {
+    if (!src[r.ch]) { src[r.ch] = zeros(); srcBuy[r.ch] = zeros(); }
+    if (di[r.d] != null) { src[r.ch][di[r.d]] = r.u; srcBuy[r.ch][di[r.d]] = r.bu; }
+  });
+  var split = { m: {}, d: {} };
+  var DEVKEYS = ['land','prod','gen','wall','teaser','pay_view','buy_ot','buy_sub'];
+  ['m','d'].forEach(function (dv) { DEVKEYS.forEach(function (k) { split[dv][k] = zeros(); }); });
+  bqQuery_(lmDevSql_(lo, hi)).forEach(function (r) {
+    if (split[r.dv] && split[r.dv][r.metric] && di[r.d] != null) split[r.dv][r.metric][di[r.d]] = r.u;
+  });
+  var ttb = [];
+  bqQuery_(lmTtbSql_(lo, hi)).forEach(function (r) {
+    if (di[r.d] != null) ttb.push([di[r.d], Number(r.diff_min)]);
+  });
+  ttb.sort(function (x, y) { return x[0] - y[0] || x[1] - y[1]; });
+
   var out = { generated_at: stamp, key: 'looksmax', name: 'looksmax', track_from: LM_TRACK_FROM,
     dates: dates, series: series,
     quiz_order: ['gender','age','fix','bugs','holdback','mirrors','rate','gap','growth','math','ratio','ascended','scan'],
-    quiz: quiz, unlocks: unlocks,
+    quiz: quiz, unlocks: unlocks, unlock_buys: unlockBuys,
+    src: src, src_buy: srcBuy, split: split, ttb: ttb,
     trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
   var ex = ghGetJson_('dashboard/data/widget_looksmax.json');
   ghPutFile_('dashboard/data/widget_looksmax.json', JSON.stringify(out), 'data: looksmax detail refresh', ex && ex.sha);

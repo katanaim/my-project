@@ -125,10 +125,29 @@
       <div id="quiz"></div>
     </div>
     <div class="panel" id="unlock_p" hidden>
-      <h2>Клики по заблокированным элементам тизера</h2>
-      <div class="hint">Что чаще всего дёргают → что триггерит пейволл</div>
+      <h2>Клики по локам тизера — и какой лок ПРОДАЁТ</h2>
+      <div class="hint">Кликнувшие по каждому заблокированному элементу и доля купивших ≤24ч после клика</div>
       <div id="unlocks"></div>
     </div>
+  </div>
+
+  <div class="two">
+    <div class="panel" id="dev_p" hidden>
+      <h2>Мобайл vs десктоп</h2>
+      <div class="hint">Ключевые шаги по устройствам за период · % = от «открыл продукт» своего устройства</div>
+      <div id="devs"></div>
+    </div>
+    <div class="panel" id="ttb_p" hidden>
+      <h2>Время до покупки</h2>
+      <div class="hint">От ПЕРВОГО визита продукта до первой покупки (по купившим в период)</div>
+      <div id="ttb"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="src_p" hidden>
+    <h2>Каналы лендинга</h2>
+    <div class="hint">Откуда пришли на лендинг (дневные уники) и купили ли ≤24ч после визита · 💰 = платный трафик (gclid/fbclid/ttclid или utm_medium cpc/paid)</div>
+    <div id="srcs"></div>
   </div>
 
   <div class="panel" id="trans_p" hidden>
@@ -146,8 +165,9 @@
     <b>Полный отчёт</b> недоставляется структурно ~26% купивших: billing-race теряет ивент, часть юзеров не возвращается,
     а подписчики «со стороны» получают отчёт вообще без покупки на виджете. <b>Квиз: старт</b> = любой шаг квиза.
     Side-фото опционально с 21.07.
-    <b>Однораз→подписка</b> = из юзеров, чья первая одноразка куплена на этом виджете в период, доля оформивших подписку к сегодня
-    (свежие когорты младше ~8 дней ещё дозревают). <b>Переходы</b>: «купил в целевом» = покупка на виджете, куда вёл клик;
+    <b>Однораз→подписка</b> = из юзеров, чья ПЕРВАЯ В ЖИЗНИ одноразка куплена на этом виджете в период, доля оформивших подписку к сегодня
+    (свежие когорты младше ~8 дней ещё дозревают). Поэтому когорта меньше числа «покупок однораз» за тот же период:
+    повторные покупатели и юзеры, чья первая одноразка была на другом виджете, в когорту не входят. <b>Переходы</b>: «купил в целевом» = покупка на виджете, куда вёл клик;
     «купил где-либо» = на любом виджете, кроме исходного. <b>Графики</b> показывают весь диапазон с релиза трекинга,
     выбранный период подсвечен; «7д среднее» = скользящее за 7 дней. <b>Значимость</b> дельт: конверсии — z-тест двух долей,
     счётчики — пуассоновский; ✓ = p&lt;0.05, ✓✓ = p&lt;0.01, «шум» = в пределах случайности.
@@ -300,7 +320,7 @@ function render(){
     ["открыли продукт", fmt(g("prod")), pcs(g("prod"),g("land"))+" от лендинга", "teal", pill(dp(g("prod"),gp("prod")),"%",0,sigCount(g("prod"),gp("prod")))],
     ["покупки", fmt(buy), fmt(g("buy_ot"))+" однораз / "+fmt(g("buy_sub"))+" подписка", "violet", pill(hasPrev?buy-buyP:null,"",0,sigCount(buy,buyP))],
     ["продукт → покупка", pcs(buy,g("prod"),2), "", "violet", pill(dpp(buy,g("prod"),buyP,gp("prod")),"п.п.",2,sigProp(buy,g("prod"),buyP,gp("prod")))],
-    ["однораз → подписка", coh>0?pcs(upg,coh):"—", coh>0?upg+" из "+coh+" одноразок":"нет одноразок за период", "violet", coh>0?pill((cohP>=10&&coh>=10)?dpp(upg,coh,upgP,cohP):null,"п.п.",1,sigProp(upg,coh,upgP,cohP)):""],
+    ["однораз → подписка", coh>0?pcs(upg,coh):"—", coh>0?upg+" из "+coh+" ПЕРВЫХ одноразок":"нет первых одноразок за период", "violet", coh>0?pill((cohP>=10&&coh>=10)?dpp(upg,coh,upgP,cohP):null,"п.п.",1,sigProp(upg,coh,upgP,cohP)):""],
     ["рега после стены", pcs(g("reg"),g("wall")), fmt(g("reg"))+" из "+fmt(g("wall")), "teal", pill(dpp(g("reg"),g("wall"),gp("reg"),gp("wall")),"п.п.",1,sigProp(g("reg"),g("wall"),gp("reg"),gp("wall")))],
     ["ошибки скана", fmt(g("err")), pcs(g("err"),g("gen"))+" от нажавших генерацию", "amber", pill(hasPrev?g("err")-gp("err"):null,"",0,sigCount(g("err"),gp("err")))]
   ].map(x=>`<div class="kpi"><div class="l">${x[0]}</div><div class="v num ${x[3]}">${x[1]}</div><div class="s num">${x[2]}</div><div style="margin-top:5px">${x[4]||""}</div></div>`).join("");
@@ -348,12 +368,57 @@ function render(){
     $("quiz_p").hidden=false;
   }
   if(DATA.unlocks){
-    const uv=Object.entries(DATA.unlocks).map(([k,arr])=>[k,sum(arr,a,b)]).filter(x=>x[1]>0).sort((x,y)=>y[1]-x[1]);
-    const umx=Math.max(...uv.map(x=>x[1]),1);
-    const utot=g("unlock");
-    $("unlocks").innerHTML=uv.map(([k,u])=>frow(k,u,pcs(u,utot,0),"",Math.max(1,u/umx*100),"amber")).join("")
+    const uv=Object.entries(DATA.unlocks).map(([k,arr])=>({k,u:sum(arr,a,b),bu:sum((DATA.unlock_buys||{})[k],a,b)}))
+      .filter(x=>x.u>0).sort((x,y)=>(pc(y.bu,y.u)||0)-(pc(x.bu,x.u)||0));
+    const umx=Math.max(...uv.map(x=>x.u),1);
+    $("unlocks").innerHTML=uv.map(x=>
+      frow(x.k,x.u,`<b>${pcs(x.bu,x.u)}</b>`,`${x.bu} куп`,Math.max(1,x.u/umx*100),"amber")).join("")
       ||`<span class="muted">нет кликов за период</span>`;
     $("unlock_p").hidden=false;
+  }
+  if(DATA.split){
+    const DS=[["land","лендинг"],["prod","продукт"],["gen","генерация"],["teaser","тизер"],["pay_view","пейволл"]];
+    const gm=k=>sum(DATA.split.m[k],a,b), gd=k=>sum(DATA.split.d[k],a,b);
+    const mBuy=gm("buy_ot")+gm("buy_sub"), dBuy=gd("buy_ot")+gd("buy_sub");
+    const sg=sigProp(mBuy,gm("prod"),dBuy,gd("prod"));
+    const verdict=!sg.tested?"разница не проверяема (мало данных)":(sg.sig?`разница ЗНАЧИМА (${pstr(sg)})`:`разница в пределах шума (${pstr(sg)})`);
+    $("devs").innerHTML=`<div style="overflow-x:auto"><table>
+      <tr><th>шаг</th><th>📱 мобайл</th><th>%</th><th>🖥 десктоп</th><th>%</th></tr>
+      ${DS.map(([k,n])=>`<tr><td>${n}</td><td class="num">${fmt(gm(k))}</td><td class="num muted">${pcs(gm(k),gm("prod"),0)}</td><td class="num">${fmt(gd(k))}</td><td class="num muted">${pcs(gd(k),gd("prod"),0)}</td></tr>`).join("")}
+      <tr><td><b>покупка</b></td><td class="num"><b>${fmt(mBuy)}</b></td><td class="num"><b>${pcs(mBuy,gm("prod"),2)}</b></td><td class="num"><b>${fmt(dBuy)}</b></td><td class="num"><b>${pcs(dBuy,gd("prod"),2)}</b></td></tr>
+      </table></div><div class="hint" style="margin-top:8px">прод → покупка: ${verdict}</div>`;
+    $("dev_p").hidden=false;
+  }
+  if(DATA.ttb){
+    const diffs=DATA.ttb.filter(x=>x[0]>=a&&x[0]<=b).map(x=>x[1]).sort((x,y)=>x-y);
+    if(diffs.length){
+      const med=diffs[Math.floor(diffs.length/2)];
+      const medS=med<60?med.toFixed(0)+" мин":med<1440?(med/60).toFixed(1)+" ч":(med/1440).toFixed(1)+" дн";
+      const B=[["до 15 мин",0,15],["15–60 мин",15,60],["1–24 ч",60,1440],["1–3 дня",1440,4320],["больше 3 дней",4320,1e15]];
+      const counts=B.map(([n,x,y])=>[n,diffs.filter(v=>v>=x&&v<y).length]);
+      const bmx=Math.max(...counts.map(x=>x[1]),1);
+      $("ttb").innerHTML=`<div style="margin-bottom:10px">медиана: <b class="num" style="color:var(--violet);font-size:18px">${medS}</b> <span class="muted num">(${diffs.length} покупателей)</span></div>`+
+        counts.map(([n,c])=>frow(n,c,pcs(c,diffs.length,0),"",Math.max(1,c/bmx*100),"violet")).join("");
+    } else $("ttb").innerHTML=`<span class="muted">нет покупок за период</span>`;
+    $("ttb_p").hidden=false;
+  }
+  if(DATA.src){
+    const CH={paid:"💰 платный (cpc/clid)",organic:"органический поиск",direct:"директ",internal:"внутренний",social:"соцсети",ai:"AI-ассистенты",other:"прочее"};
+    const rows=Object.keys(DATA.src).map(ch=>({ch,u:sum(DATA.src[ch],a,b),bu:sum(DATA.src_buy[ch],a,b)}))
+      .filter(x=>x.u>0).sort((x,y)=>y.u-x.u);
+    const tot=rows.reduce((s,x)=>s+x.u,0);
+    const paidR=rows.find(x=>x.ch==="paid"), orgR=rows.find(x=>x.ch==="organic");
+    let cmp="";
+    if(paidR&&orgR){
+      const sg=sigProp(paidR.bu,paidR.u,orgR.bu,orgR.u);
+      cmp=`<div class="hint" style="margin-top:8px">платный vs органика: ${pcs(paidR.bu,paidR.u,2)} против ${pcs(orgR.bu,orgR.u,2)}`+
+        (sg.tested?(sg.sig?` — разница значима (${pstr(sg)})`:` — шум (${pstr(sg)})`):"")+`</div>`;
+    }
+    $("srcs").innerHTML=`<div style="overflow-x:auto"><table>
+      <tr><th>канал</th><th>визиты</th><th>доля</th><th>купили ≤24ч</th><th>конверсия</th></tr>
+      ${rows.map(x=>`<tr><td>${CH[x.ch]||x.ch}</td><td class="num">${fmt(x.u)}</td><td class="num muted">${pcs(x.u,tot,0)}</td><td class="num">${x.bu}</td><td class="num"><b>${pcs(x.bu,x.u,2)}</b></td></tr>`).join("")}
+      </table></div>`+cmp;
+    $("src_p").hidden=false;
   }
   if(DATA.trans){
     const rows=DATA.trans.map(t=>({t,u:sum(t.u,a,b),btot:sum(t.bt_ot,a,b),btsub:sum(t.bt_sub,a,b),
