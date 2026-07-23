@@ -321,25 +321,37 @@ function updateProductTab(){
   const purch = fetchJson('purchases_events.json');
   let ann = {}; try { ann = fetchJson('annotations.json'); } catch(e){}
 
-  // апгрейды по дням: первая подписка юзера ПОСЛЕ его первой одноразки (день = дню подписки)
-  const upgByDay = {};
+  // апгрейды по дням (день = дню подписки) + когорты первой одноразки (для конверсии ≤7д)
+  const upgByDay = {}, coh = {};   // coh[день первой одноразки] = [всего, апгрейднулось за 7д]
   (purch.users||[]).forEach(u => {
     const o=u.o||[], s=u.s||[];
     if (!o.length) return;
-    const sUp = s.filter(x => x>o[0])[0];
+    const o0=o[0];
+    if (!s.length || s[0]>o0){       // первая покупка юзера — именно одноразка → он в когорте
+      const d = new Date(o0*1000).toISOString().slice(0,10);
+      (coh[d]=coh[d]||[0,0])[0]++;
+      if (s.some(x => x>o0 && x<=o0+7*86400)) coh[d][1]++;
+    }
+    const sUp = s.filter(x => x>o0)[0];
     if (sUp){ const d = new Date(sUp*1000).toISOString().slice(0,10); upgByDay[d]=(upgByDay[d]||0)+1; }
   });
 
-  const head = ['Дата','День','Лендинг','Продукт','Рега','Пейволл','Покупка','Однораз','Подписка','Апгрейды',
+  const head = ['Дата','День','Лендинг','Продукт','Рега','Пейволл','Покупка','Однораз','Подписка',
+                'Апгрейды/день','Ког. однораз','Онетайм→Подп ≤7д',
                 'Л→Прод','Прод→Рега','Рега→Пейв','Пейв→Куп','Л→Куп'];
   const DN = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  const rows = daily.rows.slice().reverse().map(r => {   // свежие сверху
+  const lastIso = daily.rows[daily.rows.length-1].landing_day;
+  const matureCut = Date.parse(lastIso+'T00:00:00Z')/1000 - 8*86400;  // когорты моложе 8 дней не дозрели
+  const rows = daily.rows.slice().reverse().map(r => {
     const land=+r.landing, prod=+r.product, reg=+r.registration, pay=+r.paywall, buy=+r.purchase;
     const dt = new Date(r.landing_day+'T00:00:00Z');
     const pctv = (a,b)=> b>0 ? a/b : '';
+    const c = coh[r.landing_day];
+    const mature = Date.parse(r.landing_day+'T00:00:00Z')/1000 <= matureCut;
+    const upg7 = (c && c[0]>=5 && mature) ? c[1]/c[0] : '';   // мелкие когорты и незрелые дни — пусто
     return [r.landing_day, DN[dt.getUTCDay()], land, prod, reg, pay, buy,
       r.purchase_onetime==null?'':+r.purchase_onetime, r.purchase_sub==null?'':+r.purchase_sub,
-      upgByDay[r.landing_day]||0,
+      upgByDay[r.landing_day]||0, c?c[0]:0, upg7,
       pctv(prod,land), pctv(reg,prod), pctv(pay,reg), pctv(buy,pay), pctv(buy,land)];
   });
 
@@ -351,18 +363,20 @@ function updateProductTab(){
   for (let i=0;i<nR;i++){
     const row = new Array(nC).fill('0');
     if (i===0) row.fill('@');
-    else { row[0]='@'; row[1]='@'; for (let c=10;c<nC;c++) row[c] = (c===13||c===14) ? '0.00%' : '0.0%'; }
+    else { row[0]='@'; row[1]='@'; row[11]='0.0%';
+           for (let c=12;c<nC;c++) row[c] = (c===15||c===16) ? '0.00%' : '0.0%'; }
     fmts.push(row);
   }
   sh.getRange(1,1,nR,nC).setNumberFormats(fmts);
   sh.getRange(1,1,nR,nC).setValues(out);
   sh.getRange(1,1,1,nC).setFontWeight('bold').setBackground('#1F4E78').setFontColor('#FFFFFF');
-  // подсветка известных аномалий из annotations.json
   (ann.bands||[]).forEach(b => {
     out.forEach((r,i) => { if (i>0 && r[0]>=b.from && r[0]<=b.to) sh.getRange(i+1,1,1,nC).setBackground('#fff2cc'); });
   });
   const genNote = 'Источник: dashboard-репо (katanaim.github.io/my-project/dashboard/), кросс-дневные когорты с лукбэком.\n'
     + 'Обновлено: '+(daily.generated_at||'')+'\n'
+    + 'Апгрейды/день = юзеров, оформивших ПЕРВУЮ подписку после одноразки (день подписки).\n'
+    + 'Онетайм→Подп ≤7д = когорта по дню ПЕРВОЙ одноразки: доля с подпиской за 7 дней; пусто = когорта не дозрела (моложе 8 дн) или <5 юзеров.\n'
     + 'ВАЖНО: конверсии тут ВЫШЕ, чем во вкладках виджетов — там same-day воронка, тут юзеру даётся дозреть.\n'
     + ((ann.banner && ann.banner.html) ? 'Аномалии: '+ann.banner.html.replace(/<[^>]+>/g,'') : '');
   sh.getRange(1,1).setNote(genNote);
