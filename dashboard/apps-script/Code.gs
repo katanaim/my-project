@@ -878,6 +878,161 @@ function buildWidgetRMF_() {
   Logger.log('rate-my-face detail: %s дней, %s переходов', dates.length, out.trans.length);
 }
 
+// ---------------------------------------------------------------------------
+// ДЕТАЛКА ВИДЖЕТА ai-add-person-to-photo → widget.html?w=ai-add-person-to-photo
+// Онбординг: виджет-загрузчик на лендинге (ai_add_person_to_photo_*, запущен 09.07) → продукт → рега-стена → пейволл → покупка → генерация.
+var AP_PAGE = "overchat[.]ai/web/ai-add-person-to-photo([/?#]|$)";
+var AP_LAND = "overchat[.]ai/(?:image|video|text|chat|models)/add-person-to-photo([/?#]|$)";
+var AP_TRANS_MAP = {
+  'promo:make-video': ['make-video', 'ai-face-swap-video', 'модалка'],
+  'promo:image-combiner': ['image-combiner', 'ai-image-combiner', 'модалка'],
+  'promo:aspect-ratio-changer': ['aspect-ratio-changer', 'aspect-ratio-changer', 'модалка'],
+  'promo:kissing-generator': ['kissing-generator', 'ai-kissing-generator', 'модалка'],
+  'promo:browse-catalog': ['каталог', '', 'модалка']
+};
+function apBuysCte_() {
+  return ", apbuys AS (SELECT user_pseudo_id, ts, event_name, dv FROM lmbase\n" +
+"  WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "'))";
+}
+function apMetricsSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", m AS (SELECT d, dv, user_pseudo_id, CASE\n" +
+"    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + AP_LAND + "') THEN 'land'\n" +
+"    WHEN event_name='ai_add_person_to_photo_upload_success' THEN 'fr_upload'\n" +
+"    WHEN event_name='ai_add_person_to_photo_click_generate' THEN 'fr_gen'\n" +
+"    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'prod'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='sign up view' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'wall'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='get feature view' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'pay_view'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='last chance view' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'lastchance'\n" +
+"    WHEN event_name='purchase_onetime' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'buy_ot'\n" +
+"    WHEN event_name='subscription_started' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'buy_sub'\n" +
+"    WHEN event_name='overchat' AND cat='chat' AND act='request' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') THEN 'genreq'\n" +
+"  END AS metric FROM lmbase)\n" +
+"SELECT metric, IFNULL(dv,'a') AS dvx, d, COUNT(DISTINCT user_pseudo_id) AS u\n" +
+"FROM m WHERE metric IS NOT NULL GROUP BY GROUPING SETS ((metric, dv, d), (metric, d))";
+}
+function apRegSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", wall AS (SELECT user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='sign up view' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') GROUP BY 1,2)\n" +
+", regs AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbase WHERE event_name='overchat' AND cat='login' AND act='registration' GROUP BY 1)\n" +
+"SELECT IFNULL(w.dv,'a') AS dvx, w.d, COUNT(DISTINCT IF(r.ts >= w.ts AND r.ts <= w.ts + 86400*1000000, w.user_pseudo_id, NULL)) AS reg_u\n" +
+"FROM wall w LEFT JOIN regs r USING(user_pseudo_id) GROUP BY GROUPING SETS ((w.dv, w.d), (w.d))";
+}
+function apCohSql_(scanLo, hi, cohLo) {
+  return "WITH " + excludedCte_(scanLo, hi) + lmBaseCte_(scanLo, hi) + "\n" +
+", allbuys AS (SELECT user_pseudo_id, ts, event_name, dv, REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug\n" +
+"  FROM lmbase WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/'))\n" +
+", firstot AS (SELECT user_pseudo_id, ARRAY_AGG(STRUCT(pslug, ts, dv, CAST(DATE(TIMESTAMP_MICROS(ts)) AS STRING) AS d) ORDER BY ts LIMIT 1)[OFFSET(0)] AS f\n" +
+"  FROM allbuys WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
+", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM allbuys WHERE event_name='subscription_started' GROUP BY 1)\n" +
+"SELECT IFNULL(fo.f.dv,'a') AS dvx, fo.f.d AS d, COUNT(DISTINCT fo.user_pseudo_id) AS c,\n" +
+"  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts, fo.user_pseudo_id, NULL)) AS w\n" +
+"FROM firstot fo LEFT JOIN subs s USING(user_pseudo_id)\n" +
+"WHERE fo.f.pslug='ai-add-person-to-photo' AND (s.sub_ts IS NULL OR s.sub_ts > fo.f.ts) AND fo.f.d >= '" + cohLo + "'\n" +
+"GROUP BY GROUPING SETS ((fo.f.dv, fo.f.d), (fo.f.d))";
+}
+function apSrcSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + apBuysCte_() + "\n" +
+", lands AS (SELECT user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv, CASE\n" +
+"    WHEN REGEXP_CONTAINS(pl, r'[?&](gclid|gbraid|wbraid|fbclid|ttclid)=')\n" +
+"      OR REGEXP_CONTAINS(LOWER(IFNULL(REGEXP_EXTRACT(pl, r'[?&]utm_medium=([^&#]+)'),'')), r'cpc|paid|ppc') THEN 'paid'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'chatgpt|perplexity|claude[.]ai|gemini|copilot') THEN 'ai'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'overchat[.]ai') THEN 'internal'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'tiktok|instagram|facebook|youtube|t[.]co/|reddit|pinterest|vk[.]com') THEN 'social'\n" +
+"    WHEN REGEXP_CONTAINS(IFNULL(ref,''), r'google[.]|bing[.]|yandex|duckduckgo|brave|ecosia|yahoo|ya[.]ru|coccoc|search[.]') THEN 'organic'\n" +
+"    WHEN ref IS NULL OR ref='' THEN 'direct' ELSE 'other' END AS ch\n" +
+"  FROM lmbase WHERE event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + AP_LAND + "')\n" +
+"  GROUP BY user_pseudo_id, d, ch)\n" +
+"SELECT l.ch, IFNULL(l.dv,'a') AS dvx, l.d, COUNT(DISTINCT l.user_pseudo_id) AS u,\n" +
+"  COUNT(DISTINCT IF(b.user_pseudo_id IS NOT NULL, l.user_pseudo_id, NULL)) AS bu\n" +
+"FROM lands l LEFT JOIN apbuys b ON b.user_pseudo_id=l.user_pseudo_id AND b.ts>l.ts AND b.ts<=l.ts+86400*1000000\n" +
+"GROUP BY GROUPING SETS ((l.ch, l.dv, l.d), (l.ch, l.d))";
+}
+function apTtbSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + apBuysCte_() + "\n" +
+", firstprod AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbase\n" +
+"  WHERE event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + AP_PAGE + "') GROUP BY 1)\n" +
+", firstbuy AS (SELECT user_pseudo_id, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM apbuys GROUP BY 1)\n" +
+"SELECT CAST(DATE(TIMESTAMP_MICROS(fb.ts)) AS STRING) AS d, fb.dv, ROUND((fb.ts-fp.ts)/60000000,1) AS diff_min\n" +
+"FROM firstbuy fb JOIN firstprod fp USING(user_pseudo_id) WHERE fb.ts >= fp.ts";
+}
+function apTransSql_(lo, hi) {
+  var t = [];
+  Object.keys(AP_TRANS_MAP).forEach(function (s) {
+    if (AP_TRANS_MAP[s][1]) t.push("STRUCT('" + s + "' AS src,'" + AP_TRANS_MAP[s][1] + "' AS tp)");
+  });
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", clicks AS (SELECT user_pseudo_id, ts, d, dv, 'promo:'||SUBSTR(act,5) AS src FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='add-person-to-photo-post-gen-onboarding' AND STARTS_WITH(act,'cta-'))\n" +
+", tgt AS (SELECT * FROM UNNEST([" + t.join(',') + "]))\n" +
+", buys AS (SELECT user_pseudo_id, ts, event_name, REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug\n" +
+"  FROM lmbase WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/'))\n" +
+", fc AS (SELECT src, user_pseudo_id, d, MIN(ts) AS ts, ARRAY_AGG(dv ORDER BY ts LIMIT 1)[OFFSET(0)] AS dv FROM clicks GROUP BY 1,2,3)\n" +
+"SELECT fc.src, IFNULL(fc.dv,'a') AS dvx, fc.d, COUNT(DISTINCT fc.user_pseudo_id) AS u,\n" +
+"  COUNT(DISTINCT IF(b.event_name='purchase_onetime' AND b.pslug=t.tp, fc.user_pseudo_id, NULL)) AS bt_ot,\n" +
+"  COUNT(DISTINCT IF(b.event_name='subscription_started' AND b.pslug=t.tp, fc.user_pseudo_id, NULL)) AS bt_sub,\n" +
+"  COUNT(DISTINCT IF(b.event_name='purchase_onetime' AND b.pslug!='ai-add-person-to-photo', fc.user_pseudo_id, NULL)) AS ba_ot,\n" +
+"  COUNT(DISTINCT IF(b.event_name='subscription_started' AND b.pslug!='ai-add-person-to-photo', fc.user_pseudo_id, NULL)) AS ba_sub\n" +
+"FROM fc LEFT JOIN tgt t ON t.src=fc.src\n" +
+"LEFT JOIN buys b ON b.user_pseudo_id=fc.user_pseudo_id AND b.ts>fc.ts AND b.ts<=fc.ts+14*86400*1000000\n" +
+"GROUP BY GROUPING SETS ((fc.src, fc.dv, fc.d), (fc.src, fc.d))";
+}
+function buildWidgetAP_() {
+  var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
+  var startDate = parseIso_('2026-06-01');
+  var cap = addDays_(mature, -89);
+  if (cap > startDate) startDate = cap;
+  var lo = ymd_(startDate), hi = ymd_(mature);
+  var dates = [];
+  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
+  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
+  function zeros() { return dates.map(function () { return 0; }); }
+  function tri() { return { a: zeros(), m: zeros(), d: zeros() }; }
+  function put(obj, r, field) { if (obj[r.dvx] && di[r.d] != null) obj[r.dvx][di[r.d]] = r[field]; }
+
+  var SKEYS = ['land','fr_upload','fr_gen','prod','wall','reg','pay_view','lastchance','buy_ot','buy_sub','genreq','coh','upg'];
+  var series = {}; SKEYS.forEach(function (k) { series[k] = tri(); });
+  bqQuery_(apMetricsSql_(lo, hi)).forEach(function (r) { if (series[r.metric]) put(series[r.metric], r, 'u'); });
+  bqQuery_(apRegSql_(lo, hi)).forEach(function (r) { put(series.reg, r, 'reg_u'); });
+  var scanLo = ymd_(addDays_(startDate, -14));
+  bqQuery_(apCohSql_(scanLo, hi, iso_(startDate))).forEach(function (r) { put(series.coh, r, 'c'); put(series.upg, r, 'w'); });
+  var src = {}, srcBuy = {};
+  bqQuery_(apSrcSql_(lo, hi)).forEach(function (r) {
+    if (!src[r.ch]) { src[r.ch] = tri(); srcBuy[r.ch] = tri(); }
+    put(src[r.ch], r, 'u'); put(srcBuy[r.ch], r, 'bu');
+  });
+  var ttb = [];
+  bqQuery_(apTtbSql_(lo, hi)).forEach(function (r) { if (di[r.d] != null) ttb.push([di[r.d], Number(r.diff_min), r.dv]); });
+  ttb.sort(function (x, y) { return x[0] - y[0] || x[1] - y[1]; });
+  var tr = {};
+  bqQuery_(apTransSql_(lo, hi)).forEach(function (r) {
+    if (!tr[r.src]) {
+      var m = AP_TRANS_MAP[r.src] || [r.src, '', '?'];
+      tr[r.src] = { src: r.src, label: m[0], target: m[1], place: m[2],
+        u: tri(), bt_ot: tri(), bt_sub: tri(), ba_ot: tri(), ba_sub: tri() };
+    }
+    ['u','bt_ot','bt_sub','ba_ot','ba_sub'].forEach(function (f) { put(tr[r.src][f], r, f); });
+  });
+  var out = { generated_at: stamp, key: 'ai-add-person-to-photo', name: 'add-person-to-photo', track_from: '2026-06-01',
+    dev_split: true, dates: dates, series: series,
+    funnel_steps: [['land','Визит лендинга','teal'],['fr_upload','Загрузил фото (виджет лендинга)','teal'],
+      ['fr_gen','Нажал генерацию','teal'],['prod','Открыл продукт','teal'],
+      ['wall','Увидел рега-стену','teal'],['reg','Зарегался (≤24ч)','teal'],
+      ['pay_view','Увидел пейволл','amber'],['lastchance','Увидел last-chance оффер','amber'],
+      ['buy','Купил (однораз+подписка)','violet'],['genreq','Запросил генерацию','violet']],
+    funnel_hint: 'Дневные уники по каждому шагу за период · «% пред» = конверсия с предыдущего шага. Онбординг живёт в виджете ' +
+      'на лендинге (ai_add_person_to_photo, загрузка+генерация) — запущен 09.07, поэтому до этой даты эти два шага пустые, смотри их с 09.07. ' +
+      'Виджет — один из путей входа (часть юзеров кликает в продукт напрямую), шаги могут быть ниже визитов. Рега-стена (sign up view) занижена ' +
+      'трекингом ~15–20%. Генерация идёт ПОСЛЕ покупки — результат разблокируется оплатой.',
+    src: src, src_buy: srcBuy, ttb: ttb,
+    trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
+  var ex = ghGetJson_('dashboard/data/widget_ai-add-person-to-photo.json');
+  ghPutFile_('dashboard/data/widget_ai-add-person-to-photo.json', JSON.stringify(out), 'data: add-person-to-photo detail refresh', ex && ex.sha);
+  Logger.log('add-person detail: %s дней, %s переходов', dates.length, out.trans.length);
+}
+
 // ГЛАВНАЯ: запускать ежедневно — пересчитывает последние RECOMPUTE_DAYS зрелых дней
 function runDaily() {
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
@@ -888,6 +1043,7 @@ function runDaily() {
   try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
   try { buildWidgetLooksmax_(); } catch (e) { Logger.log('looksmax detail error: ' + e); }
   try { buildWidgetRMF_(); } catch (e) { Logger.log('rate-my-face detail error: ' + e); }
+  try { buildWidgetAP_(); } catch (e) { Logger.log('add-person detail error: ' + e); }
 }
 
 // БЭКФИЛЛ ИСТОРИИ: гонит кусками по CHUNK_DAYS от свежего к старому, пока не дойдёт до HISTORY_START.
