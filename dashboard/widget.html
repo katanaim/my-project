@@ -38,6 +38,8 @@
     border:1px solid var(--border); border-radius:99px; padding:4px 11px; cursor:pointer}
   .chip:hover{color:var(--ink)}
   .chip.on{color:var(--surface); background:var(--ink); border-color:var(--ink)}
+  .chip[disabled]{opacity:.4; cursor:not-allowed}
+  .controls .sep{width:1px; height:20px; background:var(--border)}
   .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px}
   .kpi{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px}
   .kpi .l{font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; font-weight:600}
@@ -96,6 +98,10 @@
     <button class="chip on" data-days="7">7д</button>
     <button class="chip" data-days="14">14д</button>
     <button class="chip" data-days="0">Всё (с релиза трекинга)</button>
+    <span class="sep"></span>
+    <button class="chip on" data-dev="a">Все устройства</button>
+    <button class="chip" data-dev="m">📱 Мобилка</button>
+    <button class="chip" data-dev="d">🖥 Десктоп</button>
   </div>
 
   <div id="error"></div>
@@ -182,8 +188,11 @@ const $=id=>document.getElementById(id);
 const fmt=n=>n==null?"—":n.toLocaleString("ru-RU");
 const qs=new URLSearchParams(location.search);
 const WKEY=decodeURIComponent(qs.get("w")||"");
-let DATA=null, DI={};
+let DATA=null, DI={}, DEV="a";
 const sum=(arr,a,b)=>{let t=0; if(!arr) return 0; for(let i=a;i<=b;i++) t+=arr[i]||0; return t;};
+// разрез устройства: ряд может быть массивом (старый формат) или {a,m,d}
+const V=x=>{ if(!x) return null; if(Array.isArray(x)) return DEV==="a"?x:null; return x[DEV]; };
+const Vd=(x,dev)=>{ if(!x) return null; if(Array.isArray(x)) return dev==="a"?x:null; return x[dev]; };
 const pc=(a,b)=>b>0?(a/b*100):null;
 const pcs=(a,b,dec)=>{const v=pc(a,b); return v==null?"—":v.toFixed(dec==null?1:dec)+"%";};
 
@@ -309,7 +318,7 @@ function render(){
   });
 
   const S=DATA.series;
-  const g=k=>sum(S[k],a,b), gp=k=>hasPrev?sum(S[k],pa,pb):0;
+  const g=k=>sum(V(S[k]),a,b), gp=k=>hasPrev?sum(V(S[k]),pa,pb):0;
   const buy=g("buy_ot")+g("buy_sub"), buyP=gp("buy_ot")+gp("buy_sub");
   const upg=g("upg")||0, coh=g("coh")||0, upgP=gp("upg")||0, cohP=gp("coh")||0;
   const dp=(c,p)=>hasPrev&&p>0?(c-p)/p*100:null;
@@ -325,25 +334,27 @@ function render(){
     ["ошибки скана", fmt(g("err")), pcs(g("err"),g("gen"))+" от нажавших генерацию", "amber", pill(hasPrev?g("err")-gp("err"):null,"",0,sigCount(g("err"),gp("err")))]
   ].map(x=>`<div class="kpi"><div class="l">${x[0]}</div><div class="v num ${x[3]}">${x[1]}</div><div class="s num">${x[2]}</div><div style="margin-top:5px">${x[4]||""}</div></div>`).join("");
 
-  // графики — весь диапазон с релиза трекинга, выбранный период подсвечен
+  // графики — весь диапазон с релиза трекинга, выбранный период подсвечен, всё в выбранном dev-разрезе
   const N=DATA.dates.length;
-  const convD=S.prod.map((p,i)=>p>0?( (S.buy_ot[i]+S.buy_sub[i])/p*100 ):null);
-  const buySum=S.buy_ot.map((v,i)=>v+S.buy_sub[i]);
+  const Sland=V(S.land)||[], Sprod=V(S.prod)||[], Sot=V(S.buy_ot)||[], Ssub=V(S.buy_sub)||[],
+        Scoh=V(S.coh)||[], Supg=V(S.upg)||[];
+  const convD=Sprod.map((p,i)=>p>0?((Sot[i]+Ssub[i])/p*100):null);
+  const buySum=Sot.map((v,i)=>v+Ssub[i]);
   chart($("ch_traffic"),"Трафик по дням",[
-    {data:S.land,color:"var(--teal)",name:"лендинг"},
-    {data:S.prod,color:"var(--ink-3)",name:"продукт"}
+    {data:Sland,color:"var(--teal)",name:"лендинг"},
+    {data:Sprod,color:"var(--ink-3)",name:"продукт"}
   ],{hint:"дневные уники"});
   chart($("ch_conv"),"Конверсия в покупку",[
     {data:convD,color:"var(--teal)",op:.3,wd:1.5,name:"день"},
-    {data:roll7(convD,buySum,S.prod),color:"var(--teal)",wd:2.5,name:"7д среднее"}
+    {data:roll7(convD,buySum,Sprod),color:"var(--teal)",wd:2.5,name:"7д среднее"}
   ],{dec:1,unit:"%",zero:true,hint:"продукт → покупка, %"});
   chart($("ch_upg"),"Однораз → подписка (любимая)",[
-    {data:S.coh.map((c,i)=>c>0?(S.upg[i]/c*100):null),color:"var(--violet)",op:.3,wd:1.5,name:"день"},
-    {data:roll7(S.coh,S.upg,S.coh),color:"var(--violet)",wd:2.5,name:"7д среднее"}
+    {data:Scoh.map((c,i)=>c>0?(Supg[i]/c*100):null),color:"var(--violet)",op:.3,wd:1.5,name:"день"},
+    {data:roll7(Scoh,Supg,Scoh),color:"var(--violet)",wd:2.5,name:"7д среднее"}
   ],{dec:1,unit:"%",zero:true,hint:"доля когорты первых одноразок, оформившая подписку к сегодня · последние ~8 дней ещё дозревают"});
   chart($("ch_buys"),"Покупки по дням",[
-    {data:S.buy_ot,color:"var(--teal)",name:"однораз",type:"bar"},
-    {data:S.buy_sub,color:"var(--violet)",name:"подписка",type:"bar",stackOn:{data:S.buy_ot}}
+    {data:Sot,color:"var(--teal)",name:"однораз",type:"bar"},
+    {data:Ssub,color:"var(--violet)",name:"подписка",type:"bar",stackOn:{data:Sot}}
   ],{zero:true,hint:"юзеров купило"});
   $("charts_p").hidden=false;
 
@@ -359,7 +370,7 @@ function render(){
   $("funnel").innerHTML=fh; $("funnel_p").hidden=false;
 
   if(DATA.quiz && DATA.quiz_order){
-    const qv=DATA.quiz_order.map(st=>[st,sum(DATA.quiz[st],a,b)]);
+    const qv=DATA.quiz_order.map(st=>[st,sum(V(DATA.quiz[st]),a,b)]);
     const qmx=Math.max(...qv.map(x=>x[1]),1);
     $("quiz").innerHTML=qv.map(([st,u],i)=>{
       const prev=i>0?qv[i-1][1]:null;
@@ -368,7 +379,7 @@ function render(){
     $("quiz_p").hidden=false;
   }
   if(DATA.unlocks){
-    const uv=Object.entries(DATA.unlocks).map(([k,arr])=>({k,u:sum(arr,a,b),bu:sum((DATA.unlock_buys||{})[k],a,b)}))
+    const uv=Object.entries(DATA.unlocks).map(([k,arr])=>({k,u:sum(V(arr),a,b),bu:sum(V((DATA.unlock_buys||{})[k]),a,b)}))
       .filter(x=>x.u>0).sort((x,y)=>(pc(y.bu,y.u)||0)-(pc(x.bu,x.u)||0));
     const umx=Math.max(...uv.map(x=>x.u),1);
     $("unlocks").innerHTML=uv.map(x=>
@@ -376,9 +387,9 @@ function render(){
       ||`<span class="muted">нет кликов за период</span>`;
     $("unlock_p").hidden=false;
   }
-  if(DATA.split){
+  if(DATA.dev_split){
     const DS=[["land","лендинг"],["prod","продукт"],["gen","генерация"],["teaser","тизер"],["pay_view","пейволл"]];
-    const gm=k=>sum(DATA.split.m[k],a,b), gd=k=>sum(DATA.split.d[k],a,b);
+    const gm=k=>sum(Vd(S[k],"m"),a,b), gd=k=>sum(Vd(S[k],"d"),a,b);
     const mBuy=gm("buy_ot")+gm("buy_sub"), dBuy=gd("buy_ot")+gd("buy_sub");
     const sg=sigProp(mBuy,gm("prod"),dBuy,gd("prod"));
     const verdict=!sg.tested?"разница не проверяема (мало данных)":(sg.sig?`разница ЗНАЧИМА (${pstr(sg)})`:`разница в пределах шума (${pstr(sg)})`);
@@ -390,7 +401,7 @@ function render(){
     $("dev_p").hidden=false;
   }
   if(DATA.ttb){
-    const diffs=DATA.ttb.filter(x=>x[0]>=a&&x[0]<=b).map(x=>x[1]).sort((x,y)=>x-y);
+    const diffs=DATA.ttb.filter(x=>x[0]>=a&&x[0]<=b&&(DEV==="a"||x[2]===DEV)).map(x=>x[1]).sort((x,y)=>x-y);
     if(diffs.length){
       const med=diffs[Math.floor(diffs.length/2)];
       const medS=med<60?med.toFixed(0)+" мин":med<1440?(med/60).toFixed(1)+" ч":(med/1440).toFixed(1)+" дн";
@@ -404,7 +415,7 @@ function render(){
   }
   if(DATA.src){
     const CH={paid:"💰 платный (cpc/clid)",organic:"органический поиск",direct:"директ",internal:"внутренний",social:"соцсети",ai:"AI-ассистенты",other:"прочее"};
-    const rows=Object.keys(DATA.src).map(ch=>({ch,u:sum(DATA.src[ch],a,b),bu:sum(DATA.src_buy[ch],a,b)}))
+    const rows=Object.keys(DATA.src).map(ch=>({ch,u:sum(V(DATA.src[ch]),a,b),bu:sum(V(DATA.src_buy[ch]),a,b)}))
       .filter(x=>x.u>0).sort((x,y)=>y.u-x.u);
     const tot=rows.reduce((s,x)=>s+x.u,0);
     const paidR=rows.find(x=>x.ch==="paid"), orgR=rows.find(x=>x.ch==="organic");
@@ -421,8 +432,8 @@ function render(){
     $("src_p").hidden=false;
   }
   if(DATA.trans){
-    const rows=DATA.trans.map(t=>({t,u:sum(t.u,a,b),btot:sum(t.bt_ot,a,b),btsub:sum(t.bt_sub,a,b),
-      baot:sum(t.ba_ot,a,b),basub:sum(t.ba_sub,a,b)})).filter(x=>x.u>0).sort((x,y)=>y.u-x.u);
+    const rows=DATA.trans.map(t=>({t,u:sum(V(t.u),a,b),btot:sum(V(t.bt_ot),a,b),btsub:sum(V(t.bt_sub),a,b),
+      baot:sum(V(t.ba_ot),a,b),basub:sum(V(t.ba_sub),a,b)})).filter(x=>x.u>0).sort((x,y)=>y.u-x.u);
     const tot=rows.reduce((s,x)=>s+x.u,0);
     $("trans").innerHTML=rows.length?`<div style="overflow-x:auto"><table>
       <tr><th>куда</th><th>откуда</th><th>перешло</th><th>% переходов</th><th>купил в целевом<br>(однораз/подп)</th><th>купил где-либо<br>(однораз/подп)</th></tr>
@@ -437,7 +448,8 @@ function render(){
 
   const f=s=>s.slice(5).split("-").reverse().join(".");
   const preTrack=from<DATA.track_from;
-  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн)`+
+  const devName={a:"все устройства",m:"📱 мобилка",d:"🖥 десктоп"}[DEV];
+  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн) · ${devName}`+
     (preTrack?` · ⚠️ детальный трекинг живёт с ${f(DATA.track_from)} — раньше нули не по вине юзеров`:"")+
     ` · обновляется ежедневно`;
 }
@@ -458,7 +470,12 @@ document.addEventListener("mousemove",e=>{
   tip.style.opacity=1;
 });
 document.addEventListener("click",e=>{
-  const c=e.target.closest(".chip"); if(!c||!DATA) return;
+  const c=e.target.closest(".chip"); if(!c||!DATA||c.disabled) return;
+  if(c.dataset.dev){
+    DEV=c.dataset.dev;
+    document.querySelectorAll(".chip[data-dev]").forEach(x=>x.classList.toggle("on",x===c));
+    render(); return;
+  }
   const d=+c.dataset.days, last=DATA.dates[DATA.dates.length-1];
   if(d===0) setRange(DATA.track_from||DATA.dates[0], last);
   else setRange(DATA.dates[Math.max(0,DATA.dates.length-d)], last);
@@ -477,6 +494,9 @@ document.addEventListener("click",e=>{
     $("f_to").min=DATA.dates[0]; $("f_to").max=last;
     $("f_from").addEventListener("change",render);
     $("f_to").addEventListener("change",render);
+    if(!DATA.dev_split) document.querySelectorAll(".chip[data-dev]").forEach(c=>{
+      if(c.dataset.dev!=="a"){ c.disabled=true; c.title="данные без разреза устройств — обнови Code.gs и дождись пересборки"; }
+    });
     $("controls").hidden=false; $("foot").hidden=false;
     setRange(DATA.dates[Math.max(0,DATA.dates.length-7)], last);
   }catch(err){
