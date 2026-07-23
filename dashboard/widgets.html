@@ -117,7 +117,9 @@
     <b>Визиты</b> за период = сумма дневных уников (вернувшийся в другой день юзер считается снова).
     <b>Конверсия</b> = покупатели на продукте виджета / визиты лендингов виджета, тот же период; Δ — к предыдущему периоду той же длины, в п.п.
     <b>Онетайм→Подп ≤7д</b> = когорты по дню ПЕРВОЙ одноразки на этом виджете, только дозревшие дни (≥8 дней назад);
-    если период целиком свежий — метрика честно молчит. Тест-юзеры, стейдж, флуд 6–8.06 вычищены. Деньги-истина — Stripe.
+    если период целиком свежий — метрика честно молчит. <b>Значимость:</b> каждая дельта проверяется статистически (конверсии — z-тест двух долей, счётчики — пуассоновский тест):
+    цветное с ✓ = значимо (p&lt;0.05; ✓✓ = p&lt;0.01), серое «шум» = изменение в пределах случайности, «мало» = событий не хватает даже для теста;
+    точный p-value — в подсказке при наведении. Тест-юзеры, стейдж, флуд 6–8.06 вычищены. Деньги-истина — Stripe.
     История с 01.06.2026 (раньше плоских purchase-событий не существовало).
   </div>
 </div>
@@ -129,6 +131,28 @@ const fmt=n=>n==null?"—":n.toLocaleString("ru-RU");
 let DATA=null, SORT="conv", DI={};
 
 const sum=(arr,a,b)=>{let t=0; for(let i=a;i<=b;i++) t+=arr[i]||0; return t;};
+// нормальная CDF через эрф-аппроксимацию (Abramowitz-Stegun)
+function phi(z){ const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.3989423*Math.exp(-z*z/2);
+  let pr=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return z>0?1-pr:pr; }
+// z-тест двух долей: {tested, sig, p}
+function sigProp(x1,n1,x2,n2){
+  if(n1<1||n2<1) return {tested:false};
+  if(x1+x2<5) return {tested:false, small:true};
+  const p1=x1/n1, p2=x2/n2, pp=(x1+x2)/(n1+n2);
+  const se=Math.sqrt(pp*(1-pp)*(1/n1+1/n2));
+  if(se===0) return {tested:false};
+  const z=(p1-p2)/se, pv=2*(1-phi(Math.abs(z)));
+  return {tested:true, sig:pv<0.05, strong:pv<0.01, p:pv};
+}
+// тест двух счётчиков (Пуассон-аппроксимация)
+function sigCount(c1,c2){
+  if(c1+c2<5) return {tested:false, small:true};
+  const z=(c1-c2)/Math.sqrt(c1+c2), pv=2*(1-phi(Math.abs(z)));
+  return {tested:true, sig:pv<0.05, strong:pv<0.01, p:pv};
+}
+const pstr=s=>s.tested?("p="+(s.p<0.001?"<0.001":s.p.toFixed(3))):"";
 function pct(a,b){ return b>0 ? a/b*100 : null; }
 
 function agg(w, a, b, matureIdx){
@@ -139,21 +163,33 @@ function agg(w, a, b, matureIdx){
   r.conv = pct(r.buys, r.visits);
   return r;
 }
-function pill(d, unit, dec){
+function pill(d, unit, dec, sg){
   if(d==null) return `<span class="pill flat">нет базы</span>`;
-  const cls = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
-  const arrow = cls==="flat" ? "≈" : (d>0?"▲":"▼");
-  return `<span class="pill ${cls}">${arrow} ${d>0?"+":""}${d.toFixed(dec)} ${unit}</span>`;
+  const dir = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
+  const arrow = dir==="flat" ? "≈" : (d>0?"▲":"▼");
+  const val = `${arrow} ${d>0?"+":""}${d.toFixed(dec)} ${unit}`;
+  if(!sg || !sg.tested)
+    return `<span class="pill flat" title="слишком мало событий для теста">${val}${sg&&sg.small?" · мало":""}</span>`;
+  if(!sg.sig)
+    return `<span class="pill flat" title="${pstr(sg)} — в пределах шума">${val} · шум</span>`;
+  return `<span class="pill ${dir}" title="${pstr(sg)} — статистически значимо">${val}${sg.strong?" ✓✓":" ✓"}</span>`;
 }
-function dspan(d, unit, dec){
+function dspan(d, unit, dec, sg){
   if(d==null) return `<span class="d flat">—</span>`;
-  const cls = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
-  return `<span class="d ${cls}">${d>0?"+":""}${d.toFixed(dec)}${unit}</span>`;
+  const dir = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
+  const val = `${d>0?"+":""}${d.toFixed(dec)}${unit}`;
+  if(!sg) return `<span class="d ${dir}">${val}</span>`;
+  if(!sg.tested) return `<span class="d flat" title="мало событий для теста">${val}</span>`;
+  if(!sg.sig) return `<span class="d flat" title="${pstr(sg)} — шум">${val}</span>`;
+  return `<span class="d ${dir}" title="${pstr(sg)} — значимо">${val} ✓</span>`;
 }
 function card(w, cur, prv, rank, maxConv, days){
   const convS = cur.conv==null ? "—" : cur.conv.toFixed(2)+"%";
   const dconv = (cur.conv!=null && prv.conv!=null) ? cur.conv-prv.conv : null;
   const dvis  = prv.visits>0 ? (cur.visits-prv.visits)/prv.visits*100 : null;
+  const sgConv = sigProp(cur.buys, cur.visits, prv.buys, prv.visits);
+  const sgVis  = sigCount(cur.visits, prv.visits);
+  const sgBuys = sigCount(cur.buys, prv.buys);
   const barW = (cur.conv!=null && maxConv>0) ? Math.max(2, cur.conv/maxConv*100) : 0;
   const curUpg = pct(cur.upg, cur.coh), prvUpg = pct(prv.upg, prv.coh);
   let upgHtml;
@@ -161,16 +197,17 @@ function card(w, cur, prv, rank, maxConv, days){
   else if (cur.coh<10) upgHtml = `однораз→подписка: <span class="muted num">${cur.upg}/${cur.coh} — мало данных</span>`;
   else {
     const dupg = (curUpg!=null && prvUpg!=null && prv.coh>=10) ? curUpg-prvUpg : null;
-    upgHtml = `однораз→подписка ≤7д: <b>${curUpg.toFixed(1)}%</b> <span class="muted num">(${cur.upg}/${cur.coh})</span> ${dspan(dupg,"п.п.",1)}`;
+    const sgUpg = sigProp(cur.upg, cur.coh, prv.upg, prv.coh);
+    upgHtml = `однораз→подписка ≤7д: <b>${curUpg.toFixed(1)}%</b> <span class="muted num">(${cur.upg}/${cur.coh})</span> ${dspan(dupg,"п.п.",1,sgUpg)}`;
   }
   return `<div class="cardw">
     <div class="rank num">#${rank}</div>
     <div class="nm">${w.name}</div>
-    <div class="traffic num">${fmt(cur.visits)} визитов за ${days} дн ${dspan(dvis,"%",0)}</div>
-    <div class="hero"><span class="v num">${convS}</span>${pill(dconv,"п.п.",2)}</div>
+    <div class="traffic num">${fmt(cur.visits)} визитов за ${days} дн ${dspan(dvis,"%",0,sgVis)}</div>
+    <div class="hero"><span class="v num">${convS}</span>${pill(dconv,"п.п.",2,sgConv)}</div>
     <div class="lbl2">визит → покупка</div>
     <div class="bar"><i style="width:${barW}%"></i></div>
-    <div class="row"><span>покупок: <b class="num">${fmt(cur.buys)}</b> <span class="muted num">(${fmt(cur.ot)}р/${fmt(cur.sub)}п)</span></span>${dspan(cur.buys-prv.buys,"",0)}</div>
+    <div class="row"><span>покупок: <b class="num">${fmt(cur.buys)}</b> <span class="muted num">(${fmt(cur.ot)}р/${fmt(cur.sub)}п)</span></span>${dspan(cur.buys-prv.buys,"",0,sgBuys)}</div>
     <div class="row upgline"><span class="num">${upgHtml}</span></div>
     <div class="lands" title="${w.landings.join(', ')}">${w.landings.join(' · ')}</div>
   </div>`;
