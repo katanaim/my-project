@@ -26,7 +26,8 @@ var CFG = {
   RECOMPUTE_DAYS: 14,                       // сколько последних зрелых дней пересчитывать каждый прогон
   BUFFER_DAYS: 2,                           // последние N дней не берём (лаг экспорта)
   CHUNK_DAYS: 30,                           // размер куска бэкфилла (лимит Apps Script — 6 мин/запуск)
-  CHUNK_LOOKAHEAD: 7                        // при бэкфилле сканим +N дней вперёд, чтобы дозрели нижние шаги
+  CHUNK_LOOKAHEAD: 7,                       // при бэкфилле сканим +N дней вперёд, чтобы дозрели нижние шаги
+  COHORT_LOOKBACK: 14                       // сканим N дней НАЗАД от диапазона: возвращённец не считается новой когортой
 };
 
 // ---------------------------------------------------------------------------
@@ -101,8 +102,14 @@ function dailySql_(loYmd, hiYmd) {
 "        WHEN event_name='overchat' AND cat='login' AND act='registration' THEN 'registration'\n" +
 "        WHEN event_name='overchat' AND cat='chat' AND act='pop-up'\n" +
 "             AND lab IN ('get feature view','credits paywall view') THEN 'paywall'\n" +
-"        WHEN event_name='purchase_onetime' THEN 'buy_onetime'\n" +
-"        WHEN event_name='subscription_started' THEN 'buy_sub'\n" +
+"        WHEN (event_name='purchase_onetime' AND DATE(TIMESTAMP_MICROS(ts)) NOT IN ('2026-06-06','2026-06-07','2026-06-08'))\n" +
+"             OR (event_name='overchat' AND cat='purchase' AND lab='package-onetime')\n" +
+"             OR event_name IN ('purchase_apple_package-onetime','purchase_google_package-onetime') THEN 'buy_onetime'\n" +
+"        WHEN event_name='subscription_started'\n" +
+"             OR (event_name='overchat' AND cat='purchase' AND lab LIKE 'pro_%') THEN 'buy_sub'\n" +
+"        -- флуд фейковых purchase-событий 06-08.06.2026 вырезан; исторический (до июня) карт-поток ловим universal/зонтиком\n" +
+"        WHEN (event_name IN ('purchase','purchase_universal') AND DATE(TIMESTAMP_MICROS(ts)) NOT IN ('2026-06-06','2026-06-07','2026-06-08'))\n" +
+"             OR (event_name='overchat' AND cat='purchase') THEN 'buy_other'\n" +
 "      END AS step\n" +
 "    FROM raw\n" +
 "  )\n" +
@@ -143,19 +150,32 @@ function purchasesSql_(loYmd, hiYmd) {
   return "WITH " + excludedCte_(loYmd, hiYmd) + "\n" +
 ", pur AS (\n" +
 "  SELECT user_pseudo_id, event_name, event_timestamp AS ts,\n" +
-"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventCategory') AS cat,\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventLabel')    AS lab\n" +
 "  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
 "  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
-"    AND event_name IN ('purchase_onetime','subscription_started')\n" +
+"    AND (event_name IN ('purchase_onetime','subscription_started','purchase_apple_package-onetime','purchase_google_package-onetime','overchat')\n" +
+"         OR event_name LIKE 'purchase_apple_pro%' OR event_name LIKE 'purchase_google_pro%')\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
 "    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
 "    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user')\n" +
 ")\n" +
-", purf AS (SELECT * FROM pur)\n" +
+", cls AS (\n" +
+"  SELECT user_pseudo_id, ts,\n" +
+"    CASE\n" +
+"      WHEN (event_name='purchase_onetime' AND DATE(TIMESTAMP_MICROS(ts)) NOT IN ('2026-06-06','2026-06-07','2026-06-08'))\n" +
+"           OR (event_name='overchat' AND cat='purchase' AND lab='package-onetime')\n" +
+"           OR event_name IN ('purchase_apple_package-onetime','purchase_google_package-onetime') THEN 'o'\n" +
+"      WHEN event_name='subscription_started'\n" +
+"           OR (event_name='overchat' AND cat='purchase' AND lab LIKE 'pro_%')\n" +
+"           OR event_name LIKE 'purchase_apple_pro%' OR event_name LIKE 'purchase_google_pro%' THEN 's'\n" +
+"    END AS k\n" +
+"  FROM pur\n" +
+")\n" +
 "SELECT SUBSTR(TO_HEX(MD5(user_pseudo_id)), 1, 12) AS uid,\n" +
-"  ARRAY_AGG(IF(event_name='purchase_onetime',     CAST(DIV(ts,1000000) AS INT64), NULL) IGNORE NULLS ORDER BY ts) AS o,\n" +
-"  ARRAY_AGG(IF(event_name='subscription_started', CAST(DIV(ts,1000000) AS INT64), NULL) IGNORE NULLS ORDER BY ts) AS s\n" +
-"FROM purf GROUP BY uid";
+"  ARRAY_AGG(IF(k='o', CAST(DIV(ts,1000000) AS INT64), NULL) IGNORE NULLS ORDER BY ts) AS o,\n" +
+"  ARRAY_AGG(IF(k='s', CAST(DIV(ts,1000000) AS INT64), NULL) IGNORE NULLS ORDER BY ts) AS s\n" +
+"FROM cls WHERE k IS NOT NULL GROUP BY uid";
 }
 
 // ---------------------------------------------------------------------------
@@ -221,9 +241,10 @@ function refreshRange_(fromDate, toDate, scanToDate, label) {
   var fromIso = iso_(fromDate), toIso = iso_(toDate);
   var scanTo = scanToDate || toDate;
 
-  // --- воронка ---
+  // --- воронка (скан с лукбэком: «первый визит» определяется относительно прошлых 2 недель) ---
   var exDaily = ghGetJson_(CFG.PATH_DAILY);
-  var fresh = bqQuery_(dailySql_(ymd_(fromDate), ymd_(scanTo)))
+  var scanFrom = addDays_(fromDate, -CFG.COHORT_LOOKBACK);
+  var fresh = bqQuery_(dailySql_(ymd_(scanFrom), ymd_(scanTo)))
     .filter(function (r) { return r.landing_day >= fromIso && r.landing_day <= toIso; });
   if (!fresh.length) throw new Error('Воронка вернула 0 строк за ' + fromIso + '..' + toIso + ' — не коммичу');
   var oldRows = (exDaily && exDaily.json.rows) || [];
@@ -249,9 +270,15 @@ function refreshRange_(fromDate, toDate, scanToDate, label) {
     m.o = m.o.concat((u.o || []).filter(function (t) { return !outside(t); }));
     m.s = m.s.concat((u.s || []).filter(function (t) { return !outside(t); }));
   });
+  var collapse = function (arr) { // схлопнуть мульти-фаер: события юзера ближе 10 мин = одно
+    arr.sort(function(a,b){return a-b});
+    var out = [];
+    arr.forEach(function (t) { if (!out.length || t - out[out.length-1] >= 600) out.push(t); });
+    return out;
+  };
   var users = Object.keys(map).map(function (id) {
-    var m = map[id]; m.o.sort(function(a,b){return a-b}); m.s.sort(function(a,b){return a-b});
-    return { id: id, o: m.o, s: m.s };
+    var m = map[id];
+    return { id: id, o: collapse(m.o), s: collapse(m.s) };
   }).filter(function (u) { return u.o.length || u.s.length; });
   var purchJson = { generated_at: stamp, history_start: CFG.HISTORY_START, users: users };
 

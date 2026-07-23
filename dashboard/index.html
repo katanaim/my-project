@@ -9,21 +9,21 @@
     --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC; --grid:#EDEEE9;
     --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
     --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --amber-line:#D97706;
-    --band:#B4530910; --good:#15803D;
+    --band:#B4530910; --good:#15803D; --bad:#B91C1C;
   }
   @media (prefers-color-scheme:dark){:root{
     --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30; --grid:#262D33;
     --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
     --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
-    --band:#E8A33D14; --good:#4ADE80;
+    --band:#E8A33D14; --good:#4ADE80; --bad:#F87171;
   }}
   *{box-sizing:border-box}
   body{margin:0; background:var(--surface); color:var(--ink);
     font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
-  .wrap{max-width:960px; margin:0 auto; padding:40px 22px 64px; display:flex; flex-direction:column; gap:26px}
+  .wrap{max-width:960px; margin:0 auto; padding:36px 22px 64px; display:flex; flex-direction:column; gap:24px}
   .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
-  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:30px; margin:6px 0 0; letter-spacing:-.01em}
-  .sub{color:var(--ink-2); margin-top:7px; max-width:70ch}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:28px; margin:6px 0 0; letter-spacing:-.01em}
+  .sub{color:var(--ink-2); margin-top:6px; max-width:72ch; font-size:13.5px}
   .stamp{font-size:12px; color:var(--ink-3); margin-top:5px}
   .num{font-variant-numeric:tabular-nums}
   .controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--card);
@@ -36,16 +36,26 @@
   .chip:hover{color:var(--ink)}
   .chip.on{color:var(--surface); background:var(--ink); border-color:var(--ink)}
   .controls .days{margin-left:auto; font-size:12px; color:var(--ink-3)}
-  .alert{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:14px 18px}
-  .alert h3{margin:0 0 3px; font-size:14px; color:var(--amber)}
-  .alert p{margin:0; font-size:13.5px; color:var(--ink-2)}
+  .alert{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:12px 16px}
+  .alert h3{margin:0 0 3px; font-size:13.5px; color:var(--amber)}
+  .alert p{margin:0; font-size:13px; color:var(--ink-2)}
   .alert b{color:var(--ink)}
   .err{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:14px 18px; font-size:13.5px; color:var(--ink-2)}
-  .block{display:flex; flex-direction:column; gap:13px}
+  .block{display:flex; flex-direction:column; gap:12px}
   .sec{display:flex; gap:9px; align-items:baseline; flex-wrap:wrap}
   .sec b{font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); font-weight:700}
   .sec span{font-size:12.5px; color:var(--ink-3)}
-  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px 8px}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+  .kpi.hero{border-color:var(--teal)}
+  .kpi .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); font-weight:600}
+  .kpi .v{font-size:26px; font-weight:660; margin-top:3px; letter-spacing:-.01em; line-height:1.1}
+  .kpi.hero .v{color:var(--teal)}
+  .kpi .s{font-size:11.5px; color:var(--ink-2); margin-top:2px}
+  .kpi .d{font-size:11.5px; margin-top:5px; line-height:1.45}
+  .kpi .d .lbl{color:var(--ink-3)}
+  .up{color:var(--good); font-weight:600} .down{color:var(--bad); font-weight:600} .flat{color:var(--ink-3)}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:13px 17px 8px}
   .chead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; gap:10px; flex-wrap:wrap}
   .chead .t{font-size:13.5px; font-weight:650}
   .chead .t .step{color:var(--ink-3); font-weight:500}
@@ -63,9 +73,9 @@
   .stat.hero{border-color:var(--teal)}
   .stat.hero .v{color:var(--teal)}
   table{width:100%; border-collapse:collapse; font-size:12px}
-  th{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); text-align:right; font-weight:600; padding:5px 7px; border-bottom:1px solid var(--border); white-space:nowrap}
+  th{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); text-align:right; font-weight:600; padding:5px 6px; border-bottom:1px solid var(--border); white-space:nowrap}
   th:first-child{text-align:left}
-  td{padding:4px 7px; border-bottom:1px solid var(--border-soft); color:var(--ink-2); text-align:right; white-space:nowrap}
+  td{padding:4px 6px; border-bottom:1px solid var(--border-soft); color:var(--ink-2); text-align:right; white-space:nowrap}
   td:first-child{text-align:left; color:var(--ink)}
   th.sep,td.sep{border-left:1px solid var(--border)}
   th.key{color:var(--amber)} td.key{color:var(--ink)}
@@ -80,8 +90,8 @@
 <div class="wrap" id="app">
   <header>
     <div class="eyebrow">Overchat · Дневной монитор конверсий</div>
-    <h1>Ключевая воронка по суткам</h1>
-    <div class="sub">Когорта по дню первого визита лендинга, вложенная воронка: лендинг → продукт → регистрация → пейволл → покупка (рег-попап — справочная линия, его трекинг ненадёжен). Все методы оплаты, prod-only, тест-юзеры и стейдж исключены. Данные копятся ежедневно (Apps Script), период выбираешь ниже.</div>
+    <h1>Воронка и покупки по суткам</h1>
+    <div class="sub">Когорта по дню первого визита лендинга: лендинг → продукт → регистрация → пейволл → покупка. Покупка = составной признак (однораз + подписка + карта всех эпох), тест-юзеры/стейдж исключены, флуд вычищен. Деньги-истина — Stripe; здесь поведение и конверсии.</div>
     <div class="stamp" id="stamp">загрузка данных…</div>
   </header>
 
@@ -97,57 +107,64 @@
     <span class="days" id="f_info"></span>
   </div>
 
+  <section class="block" id="blk_kpi" hidden>
+    <div class="sec"><b id="kpi_title">Вчера</b><span>— последний зрелый день; сравнение с предыдущим днём и средним за 7 дней до него.</span></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
   <div id="banner"></div>
   <div id="error"></div>
 
-  <section class="block" id="blk_steps" hidden>
-    <div class="sec"><b>Пошаговые конверсии</b><span>— каждый график = один переход воронки. Здесь видно, ГДЕ именно теряем.</span></div>
-    <div class="card" id="s_lp"></div>
-    <div class="card" id="s_pp"></div>
-    <div class="card" id="s_pr"></div>
-    <div class="card" id="s_rp"></div>
-    <div class="card" id="s_pb"></div>
+  <section class="block" id="blk_money" hidden>
+    <div class="sec"><b>Деньги</b><span>— покупки, конверсии в покупку, апгрейды однораз → подписка.</span></div>
+    <div class="card" id="m_buys"></div>
+    <div class="card" id="m_landbuy"></div>
+    <div class="card" id="m_paybuy"></div>
+    <div class="card" id="m_upg"></div>
+    <div class="card" id="m_upg7"></div>
   </section>
 
-  <section class="block" id="blk_split" hidden>
-    <div class="sec"><b>Покупки по дням</b><span>— одноразка vs подписка (юзеров, купивших после пейволла; юзер мог купить и то, и то).</span></div>
-    <div class="card" id="c_split"></div>
+  <section class="block" id="blk_steps" hidden>
+    <div class="sec"><b>Воронка по шагам</b><span>— каждый график = один переход. Здесь видно, ГДЕ теряем.</span></div>
+    <div class="card" id="s_lp"></div>
+    <div class="card" id="s_pp"></div>
+    <div class="card" id="s_rp"></div>
+    <div class="card" id="s_pb"></div>
+    <div class="card" id="s_pr"></div>
   </section>
 
   <section class="block" id="blk_thru" hidden>
-    <div class="sec"><b>Сквозные показатели</b><span>— здоровье воронки целиком + объём трафика.</span></div>
+    <div class="sec"><b>Сквозные</b><span>— здоровье целиком + объём трафика.</span></div>
     <div class="card" id="c_reg"></div>
-    <div class="card" id="c_buy"></div>
     <div class="card" id="c_vol"></div>
   </section>
 
   <section class="block" id="blk_purch" hidden>
-    <div class="sec"><b>Покупки и апгрейды</b><span id="purch_win"></span></div>
+    <div class="sec"><b>Покупки и апгрейды за период</b><span id="purch_win"></span></div>
     <div class="stats" id="stats"></div>
   </section>
 
   <details open id="blk_tbl" hidden>
-    <summary>Таблица по дням — счётчики шагов и пошаговые конверсии</summary>
+    <summary>Таблица по дням</summary>
     <div style="overflow-x:auto; margin-top:8px">
       <table id="tbl"><thead><tr>
-        <th>День</th><th>Лендинг</th><th>Продукт</th><th>Попап</th><th>Рега</th><th>Пейволл</th><th>Покупка</th>
-        <th>Однораз</th><th>Подписка</th>
-        <th class="sep">Л→Прод</th><th>Прод→Рега</th><th class="key">Прод→Поп&nbsp;○</th><th>Рега→Пейв</th><th>Пейв→Куп</th>
+        <th>День</th><th>Лендинг</th><th>Продукт</th><th>Рега</th><th>Пейволл</th><th>Покупка</th>
+        <th>Однораз</th><th>Подписка</th><th>Апгр</th>
+        <th class="sep">Л→Прод</th><th>Прод→Рега</th><th>Рега→Пейв</th><th>Пейв→Куп</th><th>Л→Куп</th>
       </tr></thead><tbody></tbody></table>
     </div>
   </details>
 
   <div class="foot" id="foot" hidden>
-    <b>Как читать.</b> Период задаётся фильтром сверху — под него подстраиваются графики, таблица и сетка «Покупки и апгрейды»
-    (она считается по событиям покупок внутри выбранного диапазона; в скобках — сравнение с предыдущим периодом той же длины).
-    Верхний блок — пошаговые конверсии: каждая линия изолирует один переход, провал сразу локализуется.
-    Каскад воронки: лендинг → продукт → <b>рега</b> → пейволл → покупка (рега цепляется к продукту, НЕ к попапу —
-    трекинг попапа ненадёжен: ломался 09–16.07, переименовывался в июне; линия попапа (○) справочная).
-    <i>Рега/лендинг</i> — компаунд трёх верхних шагов (общий индикатор, но прячет причину), <i>ленд→покупка</i> — из визита в деньги.
-    «Повтор» и «Onetime→подписка» требуют времени дозреть — у свежих покупателей это floor.
-    Полосы событий и подсветка строк — из <code>data/annotations.json</code> (правится руками в гите).
-    Последние дни истории чуть незрелы по нижним шагам. День недели влияет: выходные (○) обычно выше —
-    сравнивай тот же день недели или одинаковые периоды. Money-truth по суммам — Stripe; GA4 здесь — поведение и конверсии.
+    <b>Методология.</b> Период — фильтром сверху; под него подстраивается всё, KPI-строка всегда показывает последний зрелый день.
+    Покупка в воронке = составной признак (плоские события + Apple/Google-канон + карта-universal), поэтому работает на всей истории;
+    разбивка однораз/подписка до июня частичная (карту тех времён нельзя классифицировать — только Apple).
+    <b>Апгрейды</b> = первый переход юзера однораз → подписка (день засчитывается дню подписки).
+    <b>Onetime→подписка ≤7д</b> — когортная: из купивших первую одноразку в день D, доля оформивших подписку за 7 дней; линия
+    обрывается за 8 дней до конца данных (когорты не дозрели). Повтор/апгрейд за период — floor: хвост не дозрел.
+    Рег-попап — справочная линия (трекинг ломался 09–16.07 и недосчитывает до сих пор; в истории он же — `get stars view`).
+    Аномалии данных подсвечены полосами (см. баннер). Выходные (○) обычно конвертят выше — сравнивай одинаковые дни недели.
+    Деньги-истина — Stripe: реньюалы и точные суммы тут не видны.
   </div>
 </div>
 <div class="tip" id="tip"></div>
@@ -160,8 +177,9 @@ const pct=(a,b,dec)=> (b>0&&a!=null)?+(a/b*100).toFixed(dec):null;
 const dnames=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const dow=s=>{const [y,m,dd]=s.split("-").map(Number); return (new Date(Date.UTC(y,m-1,dd)).getUTCDay()+6)%7;};
 const isoToTs=s=>Date.parse(s+"T00:00:00Z")/1000;
+const tsToIso=t=>new Date(t*1000).toISOString().slice(0,10);
 const COLORS={amber:"var(--amber-line)", teal:"var(--teal)", gray:"var(--ink-3)", violet:"var(--violet)"};
-let FULL=[], VIEW=[], USERS=null, SEED_TOTALS=null, ANN={}, EVENTS=[], BANDS=[], idx={}, GEN="";
+let FULL=[], VIEW=[], USERS=null, ANN={}, EVENTS=[], BANDS=[], idx={};
 
 function derive(r){
   r.landProd=pct(r.prod,r.land,1); r.prodReg=pct(r.reg,r.prod,1); r.prodPop=pct(r.pop,r.prod,1);
@@ -169,7 +187,6 @@ function derive(r){
   r.regPct=pct(r.reg,r.land,1);    r.landBuy=pct(r.buy,r.land,3);
   return r;
 }
-
 async function loadJSON(p){
   const r=await fetch(p,{cache:"no-store"});
   if(!r.ok) throw new Error(p+" → HTTP "+r.status);
@@ -179,7 +196,7 @@ async function loadJSON(p){
 function chartMulti(el, series, dec, H){
   const W=900,pl=44,pr=16,pt=14,pb=22, iw=W-pl-pr, ih=H-pt-pb;
   const vals=series.flatMap(s=>VIEW.map(r=>r[s.key])).filter(v=>v!=null);
-  if(!vals.length){ el.innerHTML='<div style="color:var(--ink-3);font-size:12.5px;padding:18px 0">данных пока нет — появятся после первого прогона Apps Script</div>'; return; }
+  if(!vals.length){ el.innerHTML='<div style="color:var(--ink-3);font-size:12.5px;padding:16px 0">нет данных в выбранном периоде</div>'; return; }
   let mn=Math.min(...vals), mx=Math.max(...vals); const pad=(mx-mn)*0.15||1; mn-=pad; mx+=pad;
   if(!series.some(s=>s.key==="land")) mn=Math.max(0,mn);
   const n=VIEW.length, X=i=> n>1 ? pl+i/(n-1)*iw : pl+iw/2;
@@ -210,9 +227,8 @@ function chartMulti(el, series, dec, H){
   VIEW.forEach((r,i)=>{g+=`<rect x="${X(i)-cw/2}" y="${pt}" width="${cw}" height="${ih}" fill="transparent" data-i="${i}" class="hit"/>`;});
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">${g}</svg>`;
 }
-
 function card(id,title,step,series,unit,dec,H){
-  const el=$(id); const last=VIEW[VIEW.length-1];
+  const el=$(id); const last=[...VIEW].reverse().find(r=>r[series[0].key]!=null);
   const nowVal=last?last[series[0].key]:null;
   const sub=step?` <span class="step">${step}</span>`:"";
   const legend=series.length>1
@@ -222,7 +238,25 @@ function card(id,title,step,series,unit,dec,H){
   chartMulti(el.querySelector(".cv"),series,dec,H);
 }
 
-// --- покупки/апгрейды по событиям юзеров внутри диапазона ---
+// --- апгрейды из событий покупок ---
+function computeUpgrades(){
+  const upgByDay={}, coh={};
+  USERS.forEach(u=>{
+    const o=u.o||[], s=u.s||[];
+    if(o.length){
+      const o0=o[0];
+      if(!s.length || s[0]>o0){          // первая покупка — именно одноразка
+        const d=tsToIso(o0);
+        (coh[d]=coh[d]||[0,0])[0]++;
+        if(s.some(x=>x>o0 && x<=o0+7*86400)) coh[d][1]++;
+      }
+      const sUp=s.find(x=>x>o0);         // первый апгрейд (подписка после одноразки)
+      if(sUp) { const d=tsToIso(sUp); upgByDay[d]=(upgByDay[d]||0)+1; }
+    }
+  });
+  return {upgByDay, coh};
+}
+
 function purchStats(fromTs,toTs){
   const t={any:0,ot:0,sub:0,both:0,rep:0,repOt:0,upg:0,subPrior:0};
   USERS.forEach(u=>{
@@ -238,22 +272,7 @@ function purchStats(fromTs,toTs){
 function renderPurch(fromIso,toIso){
   const box=$("stats");
   const stat=(l,v,s,p,hero)=>`<div class="stat${hero?" hero":""}"><div class="l">${l}</div><div class="v num">${v}</div><div class="s">${s||""}</div>${p?`<div class="p num">${p}</div>`:""}</div>`;
-  if(!USERS || !USERS.length){
-    if(SEED_TOTALS){
-      const t=SEED_TOTALS.totals, w=SEED_TOTALS.window;
-      $("purch_win").textContent=`— ⚠️ сид-снапшот за фикс-окно ${w.from} — ${w.to}; фильтр дат заработает после первого прогона Apps Script.`;
-      box.innerHTML=
-        stat("Покупателей всего",fmt(t.any_buyers),"")+
-        stat("Одноразка",fmt(t.onetime_buyers),pct(t.onetime_buyers,t.any_buyers,1)+"% покупателей")+
-        stat("Подписка",fmt(t.sub_buyers),pct(t.sub_buyers,t.any_buyers,1)+"% покупателей")+
-        stat("Повторная покупка",pct(t.repeat_any,t.any_buyers,1)+"%",fmt(t.repeat_any)+" юзеров с ≥2 покупками")+
-        stat("Onetime → подписка",pct(t.onetime_then_sub,t.onetime_buyers,1)+"%",fmt(t.onetime_then_sub)+" из "+fmt(t.onetime_buyers)+" одноразников","",true)+
-        stat("Подписчики из одноразки",pct(t.sub_had_prior_onetime,t.sub_buyers,1)+"%",fmt(t.sub_had_prior_onetime)+" из "+fmt(t.sub_buyers)+" подписчиков");
-      return;
-    }
-    box.innerHTML=""; $("purch_win").textContent="— данных пока нет.";
-    return;
-  }
+  if(!USERS || !USERS.length){ box.innerHTML=""; $("purch_win").textContent="— данных пока нет."; return; }
   const fromTs=isoToTs(fromIso), toTs=isoToTs(toIso)+86400;
   const len=toTs-fromTs;
   const cur=purchStats(fromTs,toTs), prev=purchStats(fromTs-len,fromTs);
@@ -261,7 +280,7 @@ function renderPurch(fromIso,toIso){
     if(x==null||y==null) return ""; const d=+(x-y).toFixed(1);
     return `пред.: ${y}% (${d>0?"+":""}${d} п.п.)`; };
   const dn=(a,b)=>{ if(b==null) return ""; const d=a-b; return `пред.: ${fmt(b)} (${d>0?"+":""}${fmt(d)})`; };
-  $("purch_win").textContent=`— уровень юзера, ${fromIso} — ${toIso}, в скобках сравнение с предыдущим периодом той же длины. Повтор/апгрейд — floor (хвост не дозрел).`;
+  $("purch_win").textContent=`— уровень юзера, ${fromIso} — ${toIso}, в скобках предыдущий период той же длины. Повтор/апгрейд — floor.`;
   box.innerHTML=
     stat("Покупателей всего",fmt(cur.any),"",dn(cur.any,prev.any))+
     stat("Одноразка",fmt(cur.ot),pct(cur.ot,cur.any,1)+"% покупателей",dn(cur.ot,prev.ot))+
@@ -269,6 +288,31 @@ function renderPurch(fromIso,toIso){
     stat("Повторная покупка",(pct(cur.rep,cur.any,1)??"—")+"%",fmt(cur.rep)+" юзеров с ≥2 покупками",dpp(cur.rep,prev.rep,cur.any,prev.any))+
     stat("Onetime → подписка",(pct(cur.upg,cur.ot,1)??"—")+"%",fmt(cur.upg)+" из "+fmt(cur.ot)+" одноразников",dpp(cur.upg,prev.upg,cur.ot,prev.ot),true)+
     stat("Подписчики из одноразки",(pct(cur.subPrior,cur.sub,1)??"—")+"%",fmt(cur.subPrior)+" из "+fmt(cur.sub)+" подписчиков",dpp(cur.subPrior,prev.subPrior,cur.sub,prev.sub));
+}
+
+// --- KPI строка: последний зрелый день vs пред. день vs среднее 7 дней до него ---
+function renderKPI(){
+  const n=FULL.length; if(n<2) return;
+  const cur=FULL[n-1], prev=FULL[n-2];
+  const w=FULL.slice(Math.max(0,n-8), n-1);
+  const avg=k=>{const v=w.map(r=>r[k]).filter(x=>x!=null); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null;};
+  $("kpi_title").textContent="Вчера · "+dnames[dow(cur.d)]+" "+cur.d.slice(5).split("-").reverse().join(".");
+  const dline=(curV,base,unit,dec,lbl)=>{
+    if(curV==null||base==null||base===0) return `<span class="lbl">${lbl}:</span> <span class="flat">—</span>`;
+    const d=unit==="п.п." ? curV-base : (curV-base)/base*100;
+    const cls=Math.abs(d)<0.5?"flat":(d>0?"up":"down");
+    const sign=d>0?"+":"";
+    return `<span class="lbl">${lbl}:</span> <span class="${cls}">${sign}${d.toFixed(dec)}${unit==="п.п."?" п.п.":"%"}</span>`;
+  };
+  const kpi=(l,v,s,curV,prevV,avgV,unit,hero)=>`
+    <div class="kpi${hero?" hero":""}"><div class="l">${l}</div><div class="v num">${v}</div><div class="s">${s}</div>
+    <div class="d num">${dline(curV,prevV,unit,unit==="п.п."?2:0,"vs вчера")}<br>${dline(curV,avgV,unit,unit==="п.п."?2:0,"vs 7дн")}</div></div>`;
+  $("kpis").innerHTML=
+    kpi("Покупки",fmt(cur.buy),`однораз ${fmt(cur.buyOt)} · подписка ${fmt(cur.buySub)}`,cur.buy,prev.buy,avg("buy"),"%",true)+
+    kpi("Лендинг → покупка",(cur.landBuy??"—")+"%","сквозная конверсия",cur.landBuy,prev.landBuy,avg("landBuy"),"п.п.",false)+
+    kpi("Пейволл → покупка",(cur.payBuy??"—")+"%","оплата после пейволла",cur.payBuy,prev.payBuy,avg("payBuy"),"п.п.",false)+
+    kpi("Апгрейды",fmt(cur.upg),"однораз → подписка",cur.upg,prev.upg,avg("upg"),"%",false)+
+    kpi("Визиты лендингов",fmt(cur.land),"объём трафика",cur.land,prev.land,avg("land"),"%",false);
 }
 
 function renderAll(){
@@ -284,16 +328,21 @@ function renderAll(){
     c.classList.toggle("on", VIEW.length===want && to===FULL[FULL.length-1].d);
   });
 
-  card("s_lp","Лендинг → продукт","доля визитов, дошедших до продукта",[{key:"landProd",color:"var(--teal)"}],"%",0,126);
-  card("s_pp","Продукт → регистрация","ключевой шаг; рега не зависит от попапа",[{key:"prodReg",color:"var(--teal)"}],"%",0,126);
-  card("s_pr","Продукт → рег-попап","СПРАВОЧНО: трекинг попапа ломался (09–16.07) и переименовывался",[{key:"prodPop",color:"var(--amber-line)"}],"%",0,126);
-  card("s_rp","Регистрация → пейволл","дошли до платного экрана",[{key:"regPay",color:"var(--teal)"}],"%",0,126);
-  card("s_pb","Пейволл → покупка","оплата после пейволла",[{key:"payBuy",color:"var(--teal)"}],"%",1,126);
-  card("c_split","Покупки по дням","юзеров с покупкой после пейволла",
+  card("m_buys","Покупки по дням","юзеров с покупкой после пейволла",
        [{key:"buyOt",color:"var(--teal)",name:"одноразка"},{key:"buySub",color:"var(--violet)",name:"подписка"}],"",0,150);
-  card("c_reg","Регистрация / лендинг","компаунд трёх шагов выше",[{key:"regPct",color:"var(--violet)"}],"%",0,150);
-  card("c_buy","Лендинг → покупка","сквозная, визит → деньги",[{key:"landBuy",color:"var(--violet)"}],"%",2,150);
-  card("c_vol","Визиты лендингов","объём трафика",[{key:"land",color:"var(--ink-3)"}],"",0,150);
+  card("m_landbuy","Лендинг → покупка","сквозная, визит → деньги",[{key:"landBuy",color:"var(--violet)"}],"%",2,126);
+  card("m_paybuy","Пейволл → покупка","оплата после пейволла",[{key:"payBuy",color:"var(--teal)"}],"%",1,126);
+  card("m_upg","Апгрейды по дням","юзеров, оформивших первую подписку после одноразки",[{key:"upg",color:"var(--amber-line)"}],"",0,126);
+  card("m_upg7","Onetime → подписка ≤7 дней","когорта по дню первой одноразки; обрыв = когорты не дозрели",[{key:"upg7",color:"var(--amber-line)"}],"%",1,126);
+
+  card("s_lp","Лендинг → продукт","доля визитов, дошедших до продукта",[{key:"landProd",color:"var(--teal)"}],"%",0,126);
+  card("s_pp","Продукт → регистрация","ключевой шаг",[{key:"prodReg",color:"var(--teal)"}],"%",0,126);
+  card("s_rp","Регистрация → пейволл","дошли до платного экрана",[{key:"regPay",color:"var(--teal)"}],"%",0,126);
+  card("s_pb","Пейволл → покупка","дубль из «Денег» для чтения воронки подряд",[{key:"payBuy",color:"var(--teal)"}],"%",1,126);
+  card("s_pr","Продукт → рег-попап","СПРАВОЧНО: трекинг ломался и недосчитывает",[{key:"prodPop",color:"var(--amber-line)"}],"%",0,126);
+
+  card("c_reg","Регистрация / лендинг","компаунд первых шагов",[{key:"regPct",color:"var(--violet)"}],"%",0,126);
+  card("c_vol","Визиты лендингов","объём трафика",[{key:"land",color:"var(--ink-3)"}],"",0,126);
 
   renderPurch(from,to);
 
@@ -303,53 +352,56 @@ function renderAll(){
     const tr=document.createElement("tr"); if(inBand)tr.className="dip";
     const wknd=dow(r.d)>=5?" ○":"";
     tr.innerHTML=`<td>${dnames[dow(r.d)]} ${r.d.slice(5)}${wknd}</td>
-      <td class="num">${fmt(r.land)}</td><td class="num">${fmt(r.prod)}</td><td class="num">${fmt(r.pop)}</td>
-      <td class="num">${fmt(r.reg)}</td><td class="num">${fmt(r.pay)}</td><td class="num">${fmt(r.buy)}</td>
-      <td class="num">${fmt(r.buyOt)}</td><td class="num">${fmt(r.buySub)}</td>
-      <td class="num sep">${r.landProd}%</td><td class="num">${r.prodReg}%</td><td class="num key">${r.prodPop}%</td>
-      <td class="num">${r.regPay}%</td><td class="num">${r.payBuy}%</td>`;
+      <td class="num">${fmt(r.land)}</td><td class="num">${fmt(r.prod)}</td><td class="num">${fmt(r.reg)}</td>
+      <td class="num">${fmt(r.pay)}</td><td class="num">${fmt(r.buy)}</td>
+      <td class="num">${fmt(r.buyOt)}</td><td class="num">${fmt(r.buySub)}</td><td class="num">${fmt(r.upg)}</td>
+      <td class="num sep">${r.landProd}%</td><td class="num">${r.prodReg}%</td>
+      <td class="num">${r.regPay}%</td><td class="num">${r.payBuy}%</td><td class="num">${r.landBuy??"—"}%</td>`;
     tb.appendChild(tr);
   });
 }
-
 function setRange(fromIso,toIso){ $("f_from").value=fromIso; $("f_to").value=toIso; renderAll(); }
 
 document.addEventListener("mousemove",e=>{
   const tip=$("tip");
   const h=e.target.closest?.(".hit"); if(!h){tip.style.opacity=0;return;}
   const r=VIEW[+h.dataset.i]; if(!r){tip.style.opacity=0;return;}
-  tip.style.opacity=1; tip.style.left=Math.min(e.clientX+13,innerWidth-240)+"px"; tip.style.top=(e.clientY+14)+"px";
+  tip.style.opacity=1; tip.style.left=Math.min(e.clientX+13,innerWidth-250)+"px"; tip.style.top=(e.clientY+14)+"px";
   const ev=EVENTS.find(x=>x.d===r.d);
   tip.innerHTML=`<b>${dnames[dow(r.d)]} ${r.d.slice(5)}</b> · лендинг ${fmt(r.land)}${ev?` · <b>${ev.label}</b>`:""}<br>`+
-    `л→прод <b>${r.landProd}%</b> · прод→рега <b>${r.prodReg}%</b> · прод→поп(○) <b>${r.prodPop}%</b><br>`+
-    `рега→пейв <b>${r.regPay}%</b> · пейв→куп <b>${r.payBuy}%</b> · куп ${fmt(r.buy)} (${fmt(r.buyOt)}/${fmt(r.buySub)})<br>`+
-    `<span style="opacity:.7">рега/ленд ${r.regPct}% · ленд→куп ${r.landBuy}%</span>`;
+    `куп <b>${fmt(r.buy)}</b> (${fmt(r.buyOt)}/${fmt(r.buySub)}) · апгр <b>${fmt(r.upg)}</b> · ленд→куп <b>${r.landBuy??"—"}%</b><br>`+
+    `л→прод <b>${r.landProd}%</b> · прод→рега <b>${r.prodReg}%</b> · рега→пейв <b>${r.regPay}%</b> · пейв→куп <b>${r.payBuy}%</b>`;
 });
 
 (async()=>{
   try{
     const [daily,purch,ann]=await Promise.all([
       loadJSON("data/funnel_daily.json"),
-      loadJSON("data/purchases_events.json").catch(()=>loadJSON("data/purchases.json")), // legacy seed
+      loadJSON("data/purchases_events.json"),
       loadJSON("data/annotations.json").catch(()=>({}))
     ]);
     ANN=ann;
-    FULL=daily.rows.map(r=>derive({
-      d:r.landing_day, land:+r.landing, prod:+r.product, pop:+r.reg_popup,
-      reg:+r.registration, pay:+r.paywall, buy:+r.purchase,
-      buyOt:r.purchase_onetime==null?null:+r.purchase_onetime,
-      buySub:r.purchase_sub==null?null:+r.purchase_sub
-    }));
-    if(purch.users&&purch.users.length) USERS=purch.users;
-    else if(purch.totals) SEED_TOTALS=purch;               // legacy seed purchases.json
-    else if(purch.seed_totals) SEED_TOTALS={totals:purch.seed_totals,window:purch.seed_window};
-
+    USERS=purch.users||[];
+    const {upgByDay,coh}=USERS.length?computeUpgrades():{upgByDay:{},coh:{}};
+    const lastIso=daily.rows[daily.rows.length-1].landing_day;
+    const matureCut=isoToTs(lastIso)-8*86400;
+    FULL=daily.rows.map(r=>{
+      const row=derive({
+        d:r.landing_day, land:+r.landing, prod:+r.product, pop:+r.reg_popup,
+        reg:+r.registration, pay:+r.paywall, buy:+r.purchase,
+        buyOt:r.purchase_onetime==null?null:+r.purchase_onetime,
+        buySub:r.purchase_sub==null?null:+r.purchase_sub
+      });
+      row.upg=upgByDay[row.d]||0;
+      const c=coh[row.d];
+      row.upg7=(c&&c[0]>=5&&isoToTs(row.d)<=matureCut)?+(c[1]/c[0]*100).toFixed(1):null;
+      return row;
+    });
     const gen=new Date(daily.generated_at);
-    $("stamp").textContent=`История: ${FULL[0].d} — ${FULL[FULL.length-1].d} · данные обновлены ${gen.toLocaleString("ru-RU",{timeZone:"UTC"})} UTC`+(daily.seed?" · ⚠️ сид-снапшот (Apps Script ещё не прогонялся)":"");
+    $("stamp").textContent=`История: ${FULL[0].d} — ${FULL[FULL.length-1].d} (${FULL.length} дн.) · обновлено ${gen.toLocaleString("ru-RU",{timeZone:"UTC"})} UTC · обновляется ежедневно`;
     if(ANN.banner) $("banner").innerHTML=`<div class="alert"><h3>${ANN.banner.title}</h3><p>${ANN.banner.html}</p></div>`;
 
-    const lastD=FULL[FULL.length-1].d;
-    const min=FULL[0].d;
+    const lastD=FULL[FULL.length-1].d, min=FULL[0].d;
     $("f_from").min=min; $("f_from").max=lastD; $("f_to").min=min; $("f_to").max=lastD;
     $("f_from").addEventListener("change",renderAll);
     $("f_to").addEventListener("change",renderAll);
@@ -358,14 +410,14 @@ document.addEventListener("mousemove",e=>{
       if(d===0) setRange(min,lastD);
       else{ const i=Math.max(0,FULL.length-d); setRange(FULL[i].d,lastD); }
     }));
-    ["controls","blk_steps","blk_split","blk_thru","blk_purch","blk_tbl","foot"].forEach(id=>$(id).hidden=false);
+    ["controls","blk_kpi","blk_money","blk_steps","blk_thru","blk_purch","blk_tbl","foot"].forEach(id=>$(id).hidden=false);
+    renderKPI();
     const i30=Math.max(0,FULL.length-30);
     setRange(FULL[i30].d,lastD);
   }catch(err){
     $("stamp").textContent="";
     $("error").innerHTML=`<div class="err"><b>Не смог загрузить данные</b> (${err.message}).<br>
-      Страницу надо открывать по HTTP (GitHub Pages или <code>python3 -m http.server</code> в папке dashboard/) —
-      через file:// браузер блокирует fetch. Проверь, что файлы <code>data/*.json</code> лежат рядом.</div>`;
+      Открывать по HTTP (GitHub Pages или <code>python3 -m http.server</code>) — file:// блокирует fetch.</div>`;
   }
 })();
 </script>
