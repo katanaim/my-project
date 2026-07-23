@@ -41,7 +41,10 @@
   .controls .sep{width:1px; height:20px; background:var(--border)}
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(252px,1fr)); gap:12px}
   .cardw{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px 16px 13px;
-    display:flex; flex-direction:column; gap:8px; position:relative; overflow:hidden}
+    display:flex; flex-direction:column; gap:8px; position:relative; overflow:hidden; cursor:pointer}
+  .cardw:hover{border-color:var(--teal)}
+  .hero .vup{color:var(--violet)}
+  .bar i.iup{background:var(--violet)}
   .cardw .rank{position:absolute; top:11px; right:13px; font-size:11px; color:var(--ink-3); font-weight:600}
   .cardw .nm{font-size:14.5px; font-weight:680; letter-spacing:-.005em; padding-right:26px; line-height:1.25}
   .cardw .traffic{font-size:11.5px; color:var(--ink-2)}
@@ -141,8 +144,8 @@
     <b>Визиты</b> за период = сумма дневных уников (вернувшийся в другой день юзер считается снова).
     <b>Конверсия</b> = покупатели на продукте виджета / визиты лендингов виджета, тот же период; Δ — к предыдущему периоду той же длины, в п.п.
     <b>Однораз→подписка</b> = из юзеров, чья ПЕРВАЯ одноразка куплена на этом виджете в выбранный период, доля оформивших
-    подписку К СЕГОДНЯШНЕМУ ДНЮ (без ожидания зрелости). ⏳ «дорастёт» = когортам меньше 8 дней, апгрейды ещё капают —
-    число будет расти при каждом обновлении; сравнение со свежим периодом смещено вниз (у прошлого было больше времени) — это тоже учитывай. <b>Значимость:</b> каждая дельта проверяется статистически (конверсии — z-тест двух долей, счётчики — пуассоновский тест):
+    подписку к сегодняшнему дню; у когорт младше ~8 дней апгрейды ещё доезжают, поэтому свежие периоды слегка занижены
+    относительно старых. «Нет сравнения» = в текущем или прошлом периоде меньше 10 одноразок — дельту не считаем. <b>Значимость:</b> каждая дельта проверяется статистически (конверсии — z-тест двух долей, счётчики — пуассоновский тест):
     цветное с ✓ = значимо (p&lt;0.05; ✓✓ = p&lt;0.01), серое «шум» = изменение в пределах случайности, «мало» = событий не хватает даже для теста;
     точный p-value — в подсказке при наведении. Тест-юзеры, стейдж, флуд 6–8.06 вычищены. Деньги-истина — Stripe.
     История с 01.06.2026 (раньше плоских purchase-событий не существовало).
@@ -188,7 +191,7 @@ function agg(w, a, b){
   return r;
 }
 function pill(d, unit, dec, sg){
-  if(d==null) return `<span class="pill flat">нет базы</span>`;
+  if(d==null) return `<span class="pill flat" title="в текущем или прошлом периоде меньше 10 событий базы — сравнивать не с чем">нет сравнения</span>`;
   const dir = Math.abs(d)<(unit==="п.п."?0.05:0.5) ? "flat" : (d>0?"up":"down");
   const arrow = dir==="flat" ? "≈" : (d>0?"▲":"▼");
   const val = `${arrow} ${d>0?"+":""}${d.toFixed(dec)} ${unit}`;
@@ -207,7 +210,7 @@ function dspan(d, unit, dec, sg){
   if(!sg.sig) return `<span class="d flat" title="${pstr(sg)} — шум">${val}</span>`;
   return `<span class="d ${dir}" title="${pstr(sg)} — значимо">${val} ✓</span>`;
 }
-function card(w, cur, prv, rank, maxConv, days, fresh){
+function card(w, cur, prv, rank, maxConv, maxUpg, days){
   const convS = cur.conv==null ? "—" : cur.conv.toFixed(2)+"%";
   const dconv = (cur.conv!=null && prv.conv!=null) ? cur.conv-prv.conv : null;
   const dvis  = prv.visits>0 ? (cur.visits-prv.visits)/prv.visits*100 : null;
@@ -217,14 +220,16 @@ function card(w, cur, prv, rank, maxConv, days, fresh){
   const barW = (cur.conv!=null && maxConv>0) ? Math.max(2, cur.conv/maxConv*100) : 0;
   const curUpg = pct(cur.upgNow, cur.coh), prvUpg = pct(prv.upgNow, prv.coh);
   let upgHtml;
-  if (cur.coh===0) upgHtml = `<div class="hero2"><span class="muted" style="font-size:12.5px">однораз→подписка: нет одноразок за период</span></div>`;
+  if (cur.coh===0) upgHtml = `<div class="hero"><span class="v num muted" style="font-size:22px">—</span></div>
+    <div class="lbl2">однораз → подписка · нет одноразок за период</div>`;
   else {
     const dupg = (curUpg!=null && prvUpg!=null && prv.coh>=10 && cur.coh>=10) ? curUpg-prvUpg : null;
     const sgUpg = sigProp(cur.upgNow, cur.coh, prv.upgNow, prv.coh);
-    upgHtml = `<div class="hero2"><span class="v2 num">${curUpg.toFixed(1)}%</span>${pill(dupg,"п.п.",1,sgUpg)}`
-      + `<span class="muted num" style="font-size:11.5px">${cur.upgNow}/${cur.coh}</span>`
-      + (fresh?`<span class="grow" title="когортам меньше 8 дней — апгрейды ещё капают, число будет расти">⏳ дорастёт</span>`:"")
-      + `</div><div class="lbl2">однораз → подписка (внутри юзера, к сегодня)</div>`;
+    const barU = (maxUpg>0) ? Math.max(2, curUpg/maxUpg*100) : 0;
+    upgHtml = `<div class="hero"><span class="v num vup">${curUpg.toFixed(1)}%</span>${pill(dupg,"п.п.",1,sgUpg)}`
+      + `<span class="muted num" style="font-size:11.5px">${cur.upgNow}/${cur.coh}</span></div>`
+      + `<div class="lbl2">однораз → подписка</div>`
+      + `<div class="bar"><i class="iup" style="width:${barU}%"></i></div>`;
   }
   const noLand = !w.landings.length;
   const trafficHtml = noLand
@@ -233,7 +238,7 @@ function card(w, cur, prv, rank, maxConv, days, fresh){
   const heroHtml = noLand
     ? `<span class="v num muted" style="font-size:22px">—</span>`
     : `<span class="v num">${convS}</span>${pill(dconv,"п.п.",2,sgConv)}`;
-  return `<div class="cardw">
+  return `<div class="cardw" data-key="${encodeURIComponent(w.key)}" title="открыть аналитику виджета">
     <div class="rank num">#${rank}</div>
     <div class="nm">${w.name}</div>
     <div class="traffic num">${trafficHtml}</div>
@@ -242,7 +247,6 @@ function card(w, cur, prv, rank, maxConv, days, fresh){
     <div class="bar"><i style="width:${barW}%"></i></div>
     <div class="row"><span>покупок: <b class="num">${fmt(cur.buys)}</b> <span class="muted num">(${fmt(cur.ot)}р/${fmt(cur.sub)}п)</span></span>${dspan(cur.buys-prv.buys,"",0,sgBuys)}</div>
     <div class="upgline">${upgHtml}</div>
-    <div class="lands" title="${noLand?('продукт: '+w.key):w.landings.join(', ')}">${noLand?('продукт: '+w.key):w.landings.join(' · ')}</div>
   </div>`;
 }
 function render(){
@@ -250,7 +254,6 @@ function render(){
   const a=DI[from], b=DI[to];
   if(a==null||b==null||a>b) return;
   const days=b-a+1;
-  const freshFlag = b > DATA.dates.length-1-8;   // диапазон задевает последние 8 дней — апгрейды дорастут
   const pa=Math.max(0,a-days), pb=a-1;
   const hasPrev = pb>=pa && pb>=0;
 
@@ -275,8 +278,9 @@ function render(){
   }[SORT];
   big.sort((x,y)=>key(y)-key(x)); small.sort((x,y)=>key(y)-key(x));
   const maxConv=Math.max(0,...big.map(x=>x.cur.conv||0));
-  $("grid").innerHTML=big.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days,freshFlag)).join("");
-  $("grid_small").innerHTML=small.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days,freshFlag)).join("");
+  const maxUpg=Math.max(0,...items.map(x=>x.cur.coh>0?(pct(x.cur.upgNow,x.cur.coh)||0):0));
+  $("grid").innerHTML=big.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,maxUpg,days)).join("");
+  $("grid_small").innerHTML=small.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,maxUpg,days)).join("");
   $("smallwrap").hidden=!small.length;
 
   $("sleep").innerHTML=sleeping.map(x=>`<div class="othrow"><span>${x.w.name}</span><span class="muted">${x.w.landings.length?x.w.landings.join(', '):'без лендинга'}</span></div>`).join("");
@@ -291,12 +295,13 @@ function render(){
   $("othwrap_d").hidden=!oth.length;
 
   const f=s=>s.slice(5).split("-").reverse().join(".");
-  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн) vs предыдущие ${days} дн`+
-    ` · апгрейд считается к сегодня (свежие когорты дорастут)`+` · обновляется ежедневно`;
+  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн) vs предыдущие ${days} дн · обновляется ежедневно`;
 }
 function setRange(fromIso,toIso){ $("f_from").value=fromIso; $("f_to").value=toIso; render(); }
 
 document.addEventListener("click",e=>{
+  const cw=e.target.closest(".cardw");
+  if(cw && cw.dataset.key){ location.href="widget.html?w="+cw.dataset.key; return; }
   const c=e.target.closest(".chip"); if(!c) return;
   if(c.dataset.sort){ SORT=c.dataset.sort;
     document.querySelectorAll(".chip[data-sort]").forEach(x=>x.classList.toggle("on",x===c));

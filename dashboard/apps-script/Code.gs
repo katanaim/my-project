@@ -469,6 +469,154 @@ function buildWidgetsDaily_() {
   Logger.log('widgets daily: %s виджетов, %s прочих, %s дней', out.widgets.length, out.others.length, dates.length);
 }
 
+// ---------------------------------------------------------------------------
+// ДЕТАЛКА ВИДЖЕТА looksmax → dashboard/data/widget_looksmax.json (widget.html?w=looksmax)
+// Полный внутренний трекинг виджета существует с 2026-07-03 (перезапуск looksmax).
+var LM_TRACK_FROM = '2026-07-03';
+var LM_TRANS_MAP = {   // куда ведёт каждый кросс-промо клик
+  'promo:rate-my-face': ['rate-my-face', 'ai-rate-my-face', 'модалка'],
+  'promo:ai-soulmate': ['soulmate', 'ai-soulmate', 'модалка'],
+  'promo:style-analysis-color': ['style-analysis: color', 'ai-style-analysis', 'модалка'],
+  'promo:style-analysis-makeup': ['style-analysis: makeup', 'ai-style-analysis', 'модалка'],
+  'promo:style-analysis-hairstyle': ['style-analysis: hairstyle', 'ai-style-analysis', 'модалка'],
+  'promo:style-analysis-style': ['style-analysis: style', 'ai-style-analysis', 'модалка'],
+  'promo:browse-catalog': ['каталог', '', 'модалка'],
+  'report:Hairstyle': ['style-analysis: hairstyle', 'ai-style-analysis', 'отчёт'],
+  'report:Makeup': ['style-analysis: makeup', 'ai-style-analysis', 'отчёт'],
+  'report:Hair Color': ['style-analysis: hair color', 'ai-style-analysis', 'отчёт'],
+  'report:Style Analysis': ['style-analysis', 'ai-style-analysis', 'отчёт'],
+  'report:Face Shape': ['face-shape-detector', 'ai-face-shape-detector', 'отчёт'],
+  'report:Skin Analyzer': ['skin-analyzer', 'ai-skin-analyzer', 'отчёт']
+};
+function lmBaseCte_(loYmd, hiYmd) {
+  return ", lmbase AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name,\n" +
+"    CAST(DATE(TIMESTAMP_MICROS(event_timestamp)) AS STRING) AS d,\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventCategory') AS cat,\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventAction') AS act,\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='eventLabel') AS lbl,\n" +
+"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
+"  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
+"  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
+"    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
+"    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
+"    AND NOT (event_name LIKE 'purchase%' AND DATE(TIMESTAMP_MICROS(event_timestamp)) IN ('2026-06-06','2026-06-07','2026-06-08'))\n" +
+"    AND NOT (event_name='subscription_started' AND DATE(TIMESTAMP_MICROS(event_timestamp)) IN ('2026-06-06','2026-06-07','2026-06-08')))";
+}
+function lmMetricsSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", m AS (SELECT d, user_pseudo_id, CASE\n" +
+"  WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/looksmaxing-ai([/?#]|$)') THEN 'land'\n" +
+"  WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'prod'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='funnel-step-view' AND lbl='age' THEN 'quiz_start'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='funnel-step-view' AND lbl='scan' THEN 'quiz_scan'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='photo-upload' AND lbl='front' THEN 'photo_front'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='photo-upload' AND lbl='side' THEN 'photo_side'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='generate-click' THEN 'gen'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='auth-wall-show' THEN 'wall'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='scan-complete' AND lbl='success' THEN 'scan_ok'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='report-view' AND lbl='teaser' THEN 'teaser'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='unlock-tap' THEN 'unlock'\n" +
+"  WHEN event_name='overchat' AND ((cat='looksmax' AND act='credit-wall-show')\n" +
+"    OR (cat='chat' AND act='pop-up' AND lbl IN ('get feature view','credits paywall view')\n" +
+"        AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)'))) THEN 'pay_view'\n" +
+"  WHEN event_name='purchase_onetime' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'buy_ot'\n" +
+"  WHEN event_name='subscription_started' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'buy_sub'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='report-view' AND lbl='full' THEN 'full'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act IN ('plan-day-nav','plan-task-toggle','plan-task-expand') THEN 'plan'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='error-view' THEN 'err'\n" +
+"  END AS metric FROM lmbase)\n" +
+"SELECT metric, d, COUNT(DISTINCT user_pseudo_id) AS u FROM m WHERE metric IS NOT NULL GROUP BY 1,2";
+}
+function lmQuizSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+"SELECT 'quiz:'||lbl AS metric, d, COUNT(DISTINCT user_pseudo_id) AS u FROM lmbase\n" +
+"WHERE event_name='overchat' AND cat='looksmax' AND act='funnel-step-view' GROUP BY 1,2\n" +
+"UNION ALL\n" +
+"SELECT 'unlock:'||lbl, d, COUNT(DISTINCT user_pseudo_id) FROM lmbase\n" +
+"WHERE event_name='overchat' AND cat='looksmax' AND act='unlock-tap' GROUP BY 1,2";
+}
+function lmRegSql_(lo, hi) {
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", wall AS (SELECT user_pseudo_id, d, MIN(ts) AS ts FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='looksmax' AND act='auth-wall-show' GROUP BY 1,2)\n" +
+", regs AS (SELECT user_pseudo_id, MIN(ts) AS ts FROM lmbase\n" +
+"  WHERE event_name='overchat' AND cat='login' AND act='registration' GROUP BY 1)\n" +
+"SELECT w.d, COUNT(DISTINCT IF(r.ts >= w.ts AND r.ts <= w.ts + 86400*1000000, w.user_pseudo_id, NULL)) AS reg_u\n" +
+"FROM wall w LEFT JOIN regs r USING(user_pseudo_id) GROUP BY 1";
+}
+function lmTransSql_(lo, hi) {
+  var t = [];
+  Object.keys(LM_TRANS_MAP).forEach(function (s) {
+    if (LM_TRANS_MAP[s][1]) t.push("STRUCT('" + s + "' AS src,'" + LM_TRANS_MAP[s][1] + "' AS tp)");
+  });
+  return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
+", clicks AS (SELECT user_pseudo_id, ts, d, CASE\n" +
+"    WHEN cat='looksmax' AND act='more-widget-click' THEN 'report:'||lbl\n" +
+"    WHEN cat='looksmax-post-onboarding' AND STARTS_WITH(act,'cta-') THEN 'promo:'||SUBSTR(act,5)\n" +
+"  END AS src FROM lmbase WHERE event_name='overchat' AND (\n" +
+"    (cat='looksmax' AND act='more-widget-click') OR (cat='looksmax-post-onboarding' AND STARTS_WITH(act,'cta-'))))\n" +
+", tgt AS (SELECT * FROM UNNEST([" + t.join(',') + "]))\n" +
+", buys AS (SELECT user_pseudo_id, ts, event_name, REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug\n" +
+"  FROM lmbase WHERE event_name IN ('purchase_onetime','subscription_started') AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/'))\n" +
+", fc AS (SELECT src, user_pseudo_id, d, MIN(ts) AS ts FROM clicks WHERE src IS NOT NULL GROUP BY 1,2,3)\n" +
+"SELECT fc.src, fc.d, COUNT(DISTINCT fc.user_pseudo_id) AS u,\n" +
+"  COUNT(DISTINCT IF(b.event_name='purchase_onetime' AND b.pslug=t.tp, fc.user_pseudo_id, NULL)) AS bt_ot,\n" +
+"  COUNT(DISTINCT IF(b.event_name='subscription_started' AND b.pslug=t.tp, fc.user_pseudo_id, NULL)) AS bt_sub,\n" +
+"  COUNT(DISTINCT IF(b.event_name='purchase_onetime' AND b.pslug!='looksmax', fc.user_pseudo_id, NULL)) AS ba_ot,\n" +
+"  COUNT(DISTINCT IF(b.event_name='subscription_started' AND b.pslug!='looksmax', fc.user_pseudo_id, NULL)) AS ba_sub\n" +
+"FROM fc LEFT JOIN tgt t ON t.src=fc.src\n" +
+"LEFT JOIN buys b ON b.user_pseudo_id=fc.user_pseudo_id AND b.ts>fc.ts AND b.ts<=fc.ts+14*86400*1000000\n" +
+"GROUP BY 1,2";
+}
+function buildWidgetLooksmax_() {
+  var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
+  var startDate = parseIso_('2026-06-01');
+  var cap = addDays_(mature, -89);
+  if (cap > startDate) startDate = cap;
+  var lo = ymd_(startDate), hi = ymd_(mature);
+
+  var dates = [];
+  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
+  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
+  function zeros() { return dates.map(function () { return 0; }); }
+
+  var SKEYS = ['land','prod','quiz_start','quiz_scan','photo_front','photo_side','gen','wall','reg',
+               'scan_ok','teaser','unlock','pay_view','buy_ot','buy_sub','full','plan','err'];
+  var series = {}; SKEYS.forEach(function (k) { series[k] = zeros(); });
+  bqQuery_(lmMetricsSql_(lo, hi)).forEach(function (r) {
+    if (series[r.metric] && di[r.d] != null) series[r.metric][di[r.d]] = r.u;
+  });
+  bqQuery_(lmRegSql_(lo, hi)).forEach(function (r) {
+    if (di[r.d] != null) series.reg[di[r.d]] = r.reg_u;
+  });
+  var quiz = {}, unlocks = {};
+  bqQuery_(lmQuizSql_(lo, hi)).forEach(function (r) {
+    var p = r.metric.split(':'), tgt = p[0] === 'quiz' ? quiz : unlocks, k = p.slice(1).join(':');
+    if (!tgt[k]) tgt[k] = zeros();
+    if (di[r.d] != null) tgt[k][di[r.d]] = r.u;
+  });
+  var tr = {};
+  bqQuery_(lmTransSql_(lo, hi)).forEach(function (r) {
+    if (!tr[r.src]) {
+      var m = LM_TRANS_MAP[r.src] || [r.src, '', '?'];
+      tr[r.src] = { src: r.src, label: m[0], target: m[1], place: m[2],
+        u: zeros(), bt_ot: zeros(), bt_sub: zeros(), ba_ot: zeros(), ba_sub: zeros() };
+    }
+    var i = di[r.d]; if (i == null) return;
+    tr[r.src].u[i] = r.u; tr[r.src].bt_ot[i] = r.bt_ot; tr[r.src].bt_sub[i] = r.bt_sub;
+    tr[r.src].ba_ot[i] = r.ba_ot; tr[r.src].ba_sub[i] = r.ba_sub;
+  });
+  var out = { generated_at: stamp, key: 'looksmax', name: 'looksmax', track_from: LM_TRACK_FROM,
+    dates: dates, series: series,
+    quiz_order: ['age','fix','bugs','holdback','mirrors','rate','gap','growth','gender','math','ratio','ascended','scan'],
+    quiz: quiz, unlocks: unlocks,
+    trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
+  var ex = ghGetJson_('dashboard/data/widget_looksmax.json');
+  ghPutFile_('dashboard/data/widget_looksmax.json', JSON.stringify(out), 'data: looksmax detail refresh', ex && ex.sha);
+  Logger.log('looksmax detail: %s дней, %s переходов', dates.length, out.trans.length);
+}
+
 // ГЛАВНАЯ: запускать ежедневно — пересчитывает последние RECOMPUTE_DAYS зрелых дней
 function runDaily() {
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
@@ -477,6 +625,7 @@ function runDaily() {
   if (from > mature) throw new Error('Окно пусто (проверь BUFFER/HISTORY_START)');
   refreshRange_(from, mature, null, 'daily refresh');
   try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
+  try { buildWidgetLooksmax_(); } catch (e) { Logger.log('looksmax detail error: ' + e); }
 }
 
 // БЭКФИЛЛ ИСТОРИИ: гонит кусками по CHUNK_DAYS от свежего к старому, пока не дойдёт до HISTORY_START.

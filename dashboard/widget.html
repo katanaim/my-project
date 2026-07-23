@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overchat · Виджет</title>
+<style>
+  :root{
+    --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC; --grid:#EDEEE9;
+    --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
+    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --amber-line:#D97706;
+    --band:#B4530910; --good:#15803D; --bad:#B91C1C; --goodbg:#15803D14; --badbg:#B91C1C12;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30; --grid:#262D33;
+    --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
+    --band:#E8A33D14; --good:#4ADE80; --bad:#F87171; --goodbg:#4ADE8018; --badbg:#F8717114;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--surface); color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px; margin:0 auto; padding:36px 22px 64px; display:flex; flex-direction:column; gap:18px}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:28px; margin:6px 0 0; letter-spacing:-.01em}
+  h2{font-size:15px; font-weight:680; margin:0 0 4px}
+  .sub{color:var(--ink-2); margin-top:6px; max-width:76ch; font-size:13.5px}
+  .stamp{font-size:12px; color:var(--ink-3); margin-top:5px}
+  .nav{font-size:13px; margin-top:8px}
+  .nav a{color:var(--teal); text-decoration:none; font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+  .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--card);
+    border:1px solid var(--border); border-radius:12px; padding:10px 14px; position:sticky; top:8px; z-index:5}
+  .controls label{font-size:12.5px; color:var(--ink-2); display:flex; gap:5px; align-items:center}
+  .controls input[type=date]{font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface);
+    border:1px solid var(--border); border-radius:7px; padding:3px 6px}
+  .chip{font:inherit; font-size:12px; font-weight:600; color:var(--ink-2); background:var(--surface);
+    border:1px solid var(--border); border-radius:99px; padding:4px 11px; cursor:pointer}
+  .chip:hover{color:var(--ink)}
+  .chip.on{color:var(--surface); background:var(--ink); border-color:var(--ink)}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+  .kpi .l{font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; font-weight:600}
+  .kpi .v{font-size:22px; font-weight:680; letter-spacing:-.015em; margin-top:3px}
+  .kpi .v.teal{color:var(--teal)} .kpi .v.violet{color:var(--violet)} .kpi .v.amber{color:var(--amber)}
+  .kpi .s{font-size:11.5px; color:var(--ink-2); margin-top:1px}
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 18px}
+  .panel .hint{font-size:12px; color:var(--ink-3); margin-bottom:10px}
+  .frow{display:grid; grid-template-columns:180px 1fr 62px 62px 62px; gap:10px; align-items:center;
+    padding:4px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px}
+  .frow:last-child{border-bottom:none}
+  .frow .n{color:var(--ink); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .frow .u{text-align:right; font-weight:650}
+  .frow .p{text-align:right; color:var(--ink-2)}
+  .frow .p.head{color:var(--ink-3); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em}
+  .fbar{height:14px; border-radius:4px; background:var(--border-soft); overflow:hidden}
+  .fbar i{display:block; height:100%; border-radius:4px; background:var(--teal); opacity:.85}
+  .fbar i.violet{background:var(--violet)} .fbar i.amber{background:var(--amber-line)}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:780px){ .two{grid-template-columns:1fr} .frow{grid-template-columns:120px 1fr 54px 54px 54px} }
+  table{border-collapse:collapse; width:100%; font-size:12.5px}
+  th{font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; text-align:right; padding:4px 8px; border-bottom:1px solid var(--border)}
+  th:first-child, td:first-child{text-align:left}
+  td{padding:5px 8px; border-bottom:1px solid var(--border-soft); text-align:right}
+  .muted{color:var(--ink-3)}
+  .err{border-left:3px solid var(--amber); background:var(--band); border-radius:0 10px 10px 0; padding:14px 18px; font-size:13.5px; color:var(--ink-2)}
+  .foot{font-size:12px; color:var(--ink-3); line-height:1.6; border-top:1px solid var(--border); padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Overchat · Аналитика виджета</div>
+    <h1 id="title">…</h1>
+    <div class="stamp" id="stamp">загрузка…</div>
+    <div class="nav"><a href="widgets.html">← Все виджеты</a> · <a href="index.html">Весь продукт</a></div>
+  </header>
+
+  <div class="controls" id="controls" hidden>
+    <label>с <input type="date" id="f_from"></label>
+    <label>по <input type="date" id="f_to"></label>
+    <button class="chip" data-days="1">День</button>
+    <button class="chip on" data-days="7">7д</button>
+    <button class="chip" data-days="14">14д</button>
+    <button class="chip" data-days="0">Всё (с релиза трекинга)</button>
+  </div>
+
+  <div id="error"></div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="panel" id="funnel_p" hidden>
+    <h2>Воронка внутри виджета</h2>
+    <div class="hint">Дневные уники по каждому шагу, суммированные за период · «% пред» = конверсия с предыдущего шага. Шаги могут превышать 100% — возвраты в другой день и недофаер step-view при повторном входе.</div>
+    <div id="funnel"></div>
+  </div>
+
+  <div class="two">
+    <div class="panel" id="quiz_p" hidden>
+      <h2>Квиз: drop-off по шагам</h2>
+      <div class="hint">Юзеры, видевшие каждый шаг онбординга (в порядке прохождения)</div>
+      <div id="quiz"></div>
+    </div>
+    <div class="panel" id="unlock_p" hidden>
+      <h2>Клики по заблокированным элементам тизера</h2>
+      <div class="hint">Что чаще всего дёргают → что триггерит пейволл</div>
+      <div id="unlocks"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="trans_p" hidden>
+    <h2>Переходы в соседние виджеты</h2>
+    <div class="hint">Клики по кросс-промо (модалка после генерации + блок «ещё решения» в полном отчёте) и покупки в течение 14 дней ПОСЛЕ клика</div>
+    <div id="trans"></div>
+  </div>
+
+  <div class="foot" id="foot" hidden>
+    <b>Методология.</b> Все числа — дневные уники юзеров, суммированные за выбранный период (вернувшийся в другой день юзер считается снова).
+    <b>Рега</b> = юзеры, зарегавшиеся в течение 24ч после показа рега-стены этого виджета (само событие реги прилетает с другого URL, поэтому по стене).
+    <b>Пейволл</b> = credit-wall виджета + глобальные get feature / credits paywall на странице виджета.
+    <b>Покупки</b> = плоские purchase_onetime / subscription_started со страницы виджета.
+    <b>Переходы</b>: «купил в целевом» = покупка на виджете, куда вёл клик; «купил где-либо» = на любом виджете, кроме исходного.
+    Тест-юзеры, стейдж и флуд 6–8.06 вычищены.
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const fmt=n=>n==null?"—":n.toLocaleString("ru-RU");
+const qs=new URLSearchParams(location.search);
+const WKEY=decodeURIComponent(qs.get("w")||"");
+let DATA=null, DI={};
+const sum=(arr,a,b)=>{let t=0; if(!arr) return 0; for(let i=a;i<=b;i++) t+=arr[i]||0; return t;};
+const pc=(a,b)=>b>0?(a/b*100):null;
+const pcs=(a,b,dec)=>{const v=pc(a,b); return v==null?"—":v.toFixed(dec==null?1:dec)+"%";};
+
+const STEPS=[
+  ["land","Визит лендинга","teal"],
+  ["prod","Открыл продукт","teal"],
+  ["quiz_start","Квиз: старт","teal"],
+  ["quiz_scan","Квиз: дошёл до скана","teal"],
+  ["photo_front","Загрузил фото анфас","teal"],
+  ["photo_side","Загрузил фото профиль","teal"],
+  ["gen","Нажал генерацию","teal"],
+  ["wall","Увидел рега-стену","teal"],
+  ["reg","Зарегался (≤24ч)","teal"],
+  ["scan_ok","Скан готов","teal"],
+  ["teaser","Увидел тизер","teal"],
+  ["unlock","Кликнул лок в тизере","amber"],
+  ["pay_view","Увидел пейволл","amber"],
+  ["buy","Купил (однораз+подписка)","violet"],
+  ["full","Открыл полный отчёт","violet"],
+  ["plan","Пользуется планом глоу-апа","violet"]
+];
+
+function frow(name,u,pTot,pPrev,w,cls){
+  return `<div class="frow"><span class="n" title="${name}">${name}</span>
+    <div class="fbar"><i class="${cls}" style="width:${w}%"></i></div>
+    <span class="u num">${fmt(u)}</span><span class="p num">${pTot}</span><span class="p num">${pPrev}</span></div>`;
+}
+
+function render(){
+  const from=$("f_from").value, to=$("f_to").value;
+  const a=DI[from], b=DI[to];
+  if(a==null||b==null||a>b) return;
+  const days=b-a+1;
+  document.querySelectorAll(".chip[data-days]").forEach(c=>{
+    const d=+c.dataset.days;
+    c.classList.toggle("on",(d===0 && from===DATA.track_from && b===DATA.dates.length-1)||(d>0 && days===d && b===DATA.dates.length-1));
+  });
+
+  const S=DATA.series;
+  const g=k=>sum(S[k],a,b);
+  const buy=g("buy_ot")+g("buy_sub");
+
+  $("kpis").innerHTML=[
+    ["визиты лендинга", fmt(g("land")), "", "teal"],
+    ["открыли продукт", fmt(g("prod")), pcs(g("prod"),g("land"))+" от лендинга", "teal"],
+    ["покупки", fmt(buy), fmt(g("buy_ot"))+" однораз / "+fmt(g("buy_sub"))+" подписка", "violet"],
+    ["продукт → покупка", pcs(buy,g("prod"),2), "", "violet"],
+    ["рега после стены", pcs(g("reg"),g("wall")), fmt(g("reg"))+" из "+fmt(g("wall")), "teal"],
+    ["ошибки скана", fmt(g("err")), pcs(g("err"),g("gen"))+" от нажавших генерацию", "amber"]
+  ].map(x=>`<div class="kpi"><div class="l">${x[0]}</div><div class="v num ${x[3]}">${x[1]}</div><div class="s num">${x[2]}</div></div>`).join("");
+
+  const vals=STEPS.map(s=>s[0]==="buy"?buy:g(s[0]));
+  const mx=Math.max(...vals,1);
+  let fh=`<div class="frow"><span></span><span></span><span class="p head">юзеры</span><span class="p head">% ленд</span><span class="p head">% пред</span></div>`;
+  STEPS.forEach((s,i)=>{
+    const u=vals[i], prev=i>0?vals[i-1]:null;
+    fh+=frow(s[1],u,pcs(u,vals[0]),i>0?pcs(u,prev,0):"—",Math.max(1,u/mx*100),s[2]==="teal"?"":s[2]);
+  });
+  $("funnel").innerHTML=fh; $("funnel_p").hidden=false;
+
+  if(DATA.quiz && DATA.quiz_order){
+    const qv=DATA.quiz_order.map(st=>[st,sum(DATA.quiz[st],a,b)]);
+    const qmx=Math.max(...qv.map(x=>x[1]),1);
+    $("quiz").innerHTML=qv.map(([st,u],i)=>{
+      const prev=i>0?qv[i-1][1]:null;
+      return frow(st,u,pcs(u,qv[0][1],0),i>0?pcs(u,prev,0):"—",Math.max(1,u/qmx*100),"");
+    }).join("");
+    $("quiz_p").hidden=false;
+  }
+  if(DATA.unlocks){
+    const uv=Object.entries(DATA.unlocks).map(([k,arr])=>[k,sum(arr,a,b)]).filter(x=>x[1]>0).sort((x,y)=>y[1]-x[1]);
+    const umx=Math.max(...uv.map(x=>x[1]),1);
+    const utot=g("unlock");
+    $("unlocks").innerHTML=uv.map(([k,u])=>frow(k,u,pcs(u,utot,0),"",Math.max(1,u/umx*100),"amber")).join("")
+      ||`<span class="muted">нет кликов за период</span>`;
+    $("unlock_p").hidden=false;
+  }
+  if(DATA.trans){
+    const rows=DATA.trans.map(t=>({t,u:sum(t.u,a,b),btot:sum(t.bt_ot,a,b),btsub:sum(t.bt_sub,a,b),
+      baot:sum(t.ba_ot,a,b),basub:sum(t.ba_sub,a,b)})).filter(x=>x.u>0).sort((x,y)=>y.u-x.u);
+    const tot=rows.reduce((s,x)=>s+x.u,0);
+    $("trans").innerHTML=rows.length?`<div style="overflow-x:auto"><table>
+      <tr><th>куда</th><th>откуда</th><th>перешло</th><th>% переходов</th><th>купил в целевом<br>(однораз/подп)</th><th>купил где-либо<br>(однораз/подп)</th></tr>
+      ${rows.map(x=>`<tr><td><b>${x.t.label}</b></td><td class="muted">${x.t.place}</td>
+        <td class="num">${fmt(x.u)}</td><td class="num muted">${pcs(x.u,tot,0)}</td>
+        <td class="num">${x.t.target?x.btot+" / "+x.btsub:"—"}</td>
+        <td class="num">${x.baot} / ${x.basub}</td></tr>`).join("")}
+      </table></div>`
+      :`<span class="muted">нет переходов за период</span>`;
+    $("trans_p").hidden=false;
+  }
+
+  const f=s=>s.slice(5).split("-").reverse().join(".");
+  const preTrack=from<DATA.track_from;
+  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн)`+
+    (preTrack?` · ⚠️ детальный трекинг живёт с ${f(DATA.track_from)} — раньше нули не по вине юзеров`:"")+
+    ` · обновляется ежедневно`;
+}
+function setRange(fromIso,toIso){ $("f_from").value=fromIso; $("f_to").value=toIso; render(); }
+
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".chip"); if(!c||!DATA) return;
+  const d=+c.dataset.days, last=DATA.dates[DATA.dates.length-1];
+  if(d===0) setRange(DATA.track_from||DATA.dates[0], last);
+  else setRange(DATA.dates[Math.max(0,DATA.dates.length-d)], last);
+});
+(async()=>{
+  $("title").textContent=WKEY||"виджет не указан";
+  if(!WKEY){ $("stamp").textContent=""; return; }
+  try{
+    const r=await fetch("data/widget_"+WKEY.replace(/\//g,"__")+".json",{cache:"no-store"});
+    if(!r.ok) throw new Error(r.status===404?"деталка ещё не собрана":"HTTP "+r.status);
+    DATA=await r.json();
+    $("title").textContent=DATA.name;
+    DI=Object.fromEntries(DATA.dates.map((d,i)=>[d,i]));
+    const last=DATA.dates[DATA.dates.length-1];
+    $("f_from").min=DATA.dates[0]; $("f_from").max=last;
+    $("f_to").min=DATA.dates[0]; $("f_to").max=last;
+    $("f_from").addEventListener("change",render);
+    $("f_to").addEventListener("change",render);
+    $("controls").hidden=false; $("foot").hidden=false;
+    setRange(DATA.dates[Math.max(0,DATA.dates.length-7)], last);
+  }catch(err){
+    $("stamp").textContent="";
+    $("error").innerHTML=`<div class="err"><b>${err.message==="деталка ещё не собрана"
+      ?"Деталка этого виджета ещё не собрана"
+      :"Не смог загрузить данные ("+err.message+")"}</b>.
+      Собираем по одной странице за раз — скажи Клоду, какой виджет разобрать следующим.</div>`;
+  }
+})();
+</script>
+</body>
+</html>
