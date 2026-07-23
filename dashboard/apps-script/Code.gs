@@ -289,112 +289,132 @@ function refreshRange_(fromDate, toDate, scanToDate, label) {
 
 
 // ---------------------------------------------------------------------------
-// ВИДЖЕТЫ ЗА НЕДЕЛЮ → dashboard/data/widgets_weekly.json (страница widgets.html)
-// Карта: лендинг → топ-продукт по фактическим переходам за 28 дн. Неделя = 7 зрелых дней.
-function widgetsMapCte_(loYmd, hiYmd) {
+// ВИДЖЕТЫ ПО ДНЯМ → dashboard/data/widgets_daily.json (страница widgets.html)
+// СТРОГАЯ атрибуция: лендинг принадлежит виджету только при слаг-совпадении
+// (нормализация: срезаем 'ai-'; префикс-матч от 6 символов; override looksmaxing-ai→looksmax).
+// Лендинги без своего продукта — отдельный список others (без конверсий).
+function widgetsStrictMapCte_(loYmd, hiYmd) {
   return "lmap AS (\n" +
-"  WITH ev AS (SELECT user_pseudo_id, event_timestamp AS ts,\n" +
-"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
+"  WITH ev28 AS (SELECT user_pseudo_id, (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
 "    FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
 "    WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "' AND event_name='page_view'\n" +
 "      AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
 "      AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
 "      AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user'))\n" +
-"  , land AS (SELECT user_pseudo_id, REGEXP_EXTRACT(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/([^/?#]+)') AS lslug, MIN(ts) AS lts FROM ev WHERE REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/') GROUP BY 1,2 HAVING lslug IS NOT NULL)\n" +
-"  , prod AS (SELECT user_pseudo_id, REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug, MIN(ts) AS pts FROM ev WHERE REGEXP_CONTAINS(pl, r'overchat[.]ai/web/') AND NOT REGEXP_CONTAINS(pl, r'/web/c/') GROUP BY 1,2 HAVING pslug IS NOT NULL AND pslug NOT IN ('auth','catalog','settings','subscribe','subscription','app','media','account','billing','pricing','home','login','signup','checkout'))\n" +
-"  , pair AS (SELECT l.lslug, p.pslug, COUNT(DISTINCT l.user_pseudo_id) AS u FROM land l JOIN prod p ON l.user_pseudo_id=p.user_pseudo_id AND p.pts>=l.lts GROUP BY 1,2)\n" +
-"  , ranked AS (SELECT lslug, pslug, ROW_NUMBER() OVER (PARTITION BY lslug ORDER BY u DESC) AS rn FROM pair)\n" +
-"  , vis AS (SELECT lslug, COUNT(DISTINCT user_pseudo_id) AS visits FROM land GROUP BY 1)\n" +
-"  SELECT v.lslug, IFNULL(r.pslug, CONCAT('LANDONLY:', v.lslug)) AS wkey, IFNULL(r.pslug,'~none~') AS pslug\n" +
-"  FROM vis v LEFT JOIN ranked r ON v.lslug=r.lslug AND r.rn=1 WHERE v.visits > 100\n" +
+"  , land AS (SELECT REGEXP_EXTRACT(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/([^/?#]+)') AS lslug,\n" +
+"      COUNT(DISTINCT user_pseudo_id) AS visits FROM ev28 WHERE REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/')\n" +
+"      GROUP BY 1 HAVING lslug IS NOT NULL AND visits > 100)\n" +
+"  , prods AS (SELECT DISTINCT REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug FROM ev28\n" +
+"      WHERE REGEXP_CONTAINS(pl, r'overchat[.]ai/web/') AND NOT REGEXP_CONTAINS(pl, r'/web/c/'))\n" +
+"  , norm AS (SELECT l.lslug, p.pslug,\n" +
+"      IF(l.lslug='looksmaxing-ai','looksmax',REGEXP_REPLACE(l.lslug, r'^ai-','')) AS nl,\n" +
+"      REGEXP_REPLACE(p.pslug, r'^ai-','') AS np\n" +
+"    FROM land l CROSS JOIN prods p WHERE p.pslug IS NOT NULL)\n" +
+"  SELECT lslug, pslug AS wkey, pslug FROM norm\n" +
+"  WHERE nl = np OR (LENGTH(nl)>=6 AND LENGTH(np)>=6 AND (STARTS_WITH(nl,np) OR STARTS_WITH(np,nl)))\n" +
+"  QUALIFY ROW_NUMBER() OVER (PARTITION BY lslug ORDER BY LENGTH(pslug)) = 1\n" +
 ")";
 }
-
-function widgetsWeeklySql_(mapLo, mapHi, wLo, wMid, wHi) { // wLo..wMid-1 = P, wMid..wHi = W
-  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsMapCte_(mapLo, mapHi) + "\n" +
-", base AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name,\n" +
+function widgetsBaseCte_(loYmd, hiYmd) {
+  return ", wbase AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name,\n" +
+"    CAST(DATE(TIMESTAMP_MICROS(event_timestamp)) AS STRING) AS d,\n" +
 "    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
 "  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
-"  WHERE _TABLE_SUFFIX BETWEEN '" + wLo + "' AND '" + wHi + "'\n" +
+"  WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "'\n" +
 "    AND event_name IN ('page_view','purchase_onetime','subscription_started')\n" +
 "    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
 "    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
-"    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user'))\n" +
-", ev AS (SELECT base.*, FORMAT_DATE('%Y%m%d', DATE(TIMESTAMP_MICROS(ts))) AS d8,\n" +
+"    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user')\n" +
+"    AND NOT (event_name != 'page_view' AND DATE(TIMESTAMP_MICROS(event_timestamp)) IN ('2026-06-06','2026-06-07','2026-06-08')))\n" +
+", wev AS (SELECT wbase.*,\n" +
 "    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/([^/?#]+)'),'~') AS lslug,\n" +
-"    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)'),'~') AS pslug FROM base)\n" +
-", tagged AS (SELECT m.wkey, m.pslug AS wprod, e.user_pseudo_id, e.event_name,\n" +
-"    IF(e.d8 >= '" + wMid + "','W','P') AS win,\n" +
+"    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)'),'~') AS pslug FROM wbase)";
+}
+function widgetsDailySql_(mapLo, mapHi, lo, hi) {
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) +
+  widgetsBaseCte_(lo, hi) + "\n" +
+", tagged AS (SELECT m.wkey, e.d, e.user_pseudo_id, e.event_name,\n" +
 "    (e.lslug=m.lslug) AS on_land, (e.pslug=m.pslug) AS on_prod\n" +
-"  FROM ev e JOIN lmap m ON e.lslug=m.lslug OR e.pslug=m.pslug)\n" +
-", pu AS (SELECT wkey, win, user_pseudo_id,\n" +
+"  FROM wev e JOIN lmap m ON e.lslug=m.lslug OR e.pslug=m.pslug)\n" +
+", pu AS (SELECT wkey, d, user_pseudo_id,\n" +
 "    LOGICAL_OR(on_land AND event_name='page_view') AS s1,\n" +
 "    LOGICAL_OR(on_prod AND event_name='purchase_onetime') AS has_ot,\n" +
 "    LOGICAL_OR(on_prod AND event_name='subscription_started') AS has_sub\n" +
 "  FROM tagged GROUP BY 1,2,3)\n" +
-"SELECT wkey, win, COUNTIF(s1) AS visits, COUNTIF(has_ot OR has_sub) AS buys,\n" +
-"  COUNTIF(has_ot) AS buy_ot, COUNTIF(has_sub) AS buy_sub\n" +
+"SELECT wkey, d, COUNTIF(s1) AS v, COUNTIF(has_ot OR has_sub) AS b, COUNTIF(has_ot) AS o, COUNTIF(has_sub) AS s\n" +
 "FROM pu GROUP BY 1,2";
 }
-
-function widgetsUpgSql_(mapLo, mapHi, scanLo, scanHi, curLo, curHi, prevLo) {
-  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsMapCte_(mapLo, mapHi) + "\n" +
-", base AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name,\n" +
-"    (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
-"  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
-"  WHERE _TABLE_SUFFIX BETWEEN '" + scanLo + "' AND '" + scanHi + "'\n" +
-"    AND event_name IN ('purchase_onetime','subscription_started')\n" +
-"    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
-"    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
-"    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user'))\n" +
-", ev AS (SELECT base.*, FORMAT_DATE('%Y%m%d', DATE(TIMESTAMP_MICROS(ts))) AS d8,\n" +
-"    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)'),'~') AS pslug FROM base)\n" +
-", firstot AS (SELECT user_pseudo_id, ARRAY_AGG(STRUCT(pslug, ts, d8) ORDER BY ts LIMIT 1)[OFFSET(0)] AS f\n" +
-"  FROM ev WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
-", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM ev WHERE event_name='subscription_started' GROUP BY 1)\n" +
-", coh AS (SELECT DISTINCT m.wkey, fo.user_pseudo_id, fo.f.d8 AS cd,\n" +
-"    (s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts AND s.sub_ts <= fo.f.ts + 7*86400*1000000) AS upg\n" +
-"  FROM firstot fo JOIN lmap m ON fo.f.pslug = m.pslug\n" +
-"  LEFT JOIN subs s USING(user_pseudo_id)\n" +
-"  WHERE s.sub_ts IS NULL OR s.sub_ts > fo.f.ts)\n" +
-"SELECT wkey, IF(cd >= '" + curLo + "','C','PREV') AS win,\n" +
-"  COUNT(DISTINCT user_pseudo_id) AS coh_n, COUNT(DISTINCT IF(upg, user_pseudo_id, NULL)) AS upg_n\n" +
-"FROM coh WHERE cd BETWEEN '" + prevLo + "' AND '" + curHi + "' GROUP BY 1,2";
+function widgetsCohSql_(mapLo, mapHi, scanLo, hi, cohLo) {
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) +
+  widgetsBaseCte_(scanLo, hi) + "\n" +
+", firstot AS (SELECT user_pseudo_id, ARRAY_AGG(STRUCT(pslug, ts, d) ORDER BY ts LIMIT 1)[OFFSET(0)] AS f\n" +
+"  FROM wev WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
+", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM wev WHERE event_name='subscription_started' GROUP BY 1)\n" +
+"SELECT m.wkey, fo.f.d AS d, COUNT(DISTINCT fo.user_pseudo_id) AS c,\n" +
+"  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts AND s.sub_ts <= fo.f.ts + 7*86400*1000000, fo.user_pseudo_id, NULL)) AS u\n" +
+"FROM firstot fo JOIN lmap m ON fo.f.pslug = m.pslug\n" +
+"LEFT JOIN subs s ON s.user_pseudo_id = fo.user_pseudo_id\n" +
+"WHERE (s.sub_ts IS NULL OR s.sub_ts > fo.f.ts) AND fo.f.d >= '" + cohLo + "'\n" +
+"GROUP BY 1,2";
 }
-
-function buildWidgetsWeekly_() {
+function widgetsOthersSql_(mapLo, mapHi, lo, hi) {
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) +
+  widgetsBaseCte_(lo, hi) + "\n" +
+"SELECT e.lslug AS wkey, e.d, COUNT(DISTINCT e.user_pseudo_id) AS v\n" +
+"FROM wev e LEFT JOIN lmap m ON e.lslug = m.lslug\n" +
+"WHERE e.event_name='page_view' AND e.lslug != '~' AND m.lslug IS NULL\n" +
+"GROUP BY 1,2 HAVING v >= 5";
+}
+function buildWidgetsDaily_() {
   var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
-  var wHi = mature, wMid = addDays_(mature, -6), wLo = addDays_(mature, -13);
-  var mapLo = addDays_(mature, -27), mapHi = mature;
-  var curHi = addDays_(mature, -8), curLo = addDays_(curHi, -27), prevLo = addDays_(curLo, -28);
-  var scanLo = prevLo, scanHi = mature;
+  var startDate = parseIso_('2026-06-01');
+  var cap = addDays_(mature, -89);
+  if (cap > startDate) startDate = cap;               // держим окно не длиннее 90 дней
+  var mapLo = ymd_(addDays_(mature, -27)), mapHi = ymd_(mature);
+  var lo = ymd_(startDate), hi = ymd_(mature);
+  var scanLo = ymd_(addDays_(startDate, -14));
 
-  var wk = bqQuery_(widgetsWeeklySql_(ymd_(mapLo), ymd_(mapHi), ymd_(wLo), ymd_(wMid), ymd_(wHi)));
-  var ug = bqQuery_(widgetsUpgSql_(ymd_(mapLo), ymd_(mapHi), ymd_(scanLo), ymd_(scanHi), ymd_(curLo), ymd_(curHi), ymd_(prevLo)));
+  var dates = [];
+  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
+  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
 
-  var byW = {};
-  wk.forEach(function (r) { (byW[r.wkey] = byW[r.wkey] || {})[r.win] = r; });
-  var byU = {};
-  ug.forEach(function (r) { (byU[r.wkey] = byU[r.wkey] || {})[r.win] = r; });
+  var W = {};
+  function slot(k) {
+    if (!W[k]) {
+      var name = k.indexOf('ai-') === 0 ? k.substring(3) : k;
+      W[k] = { key: k, name: name, landings: [], v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros() };
+    }
+    return W[k];
+  }
+  function zeros(){ return dates.map(function(){ return 0; }); }
 
-  var widgets = Object.keys(byW).map(function (k) {
-    var w = byW[k].W || {}, p = byW[k].P || {};
-    var uc = (byU[k] || {}).C || {}, up = (byU[k] || {}).PREV || {};
-    var name = k.replace('LANDONLY:', '');
-    if (name.indexOf('ai-') === 0) name = name.substring(3);
-    return { key: k, name: name, product: k.indexOf('LANDONLY:')===0 ? '' : k, landings: [],
-      visits: w.visits||0, visitsP: p.visits||0, buys: w.buys||0, buysP: p.buys||0,
-      buyOt: w.buy_ot||0, buySub: w.buy_sub||0,
-      cohN: uc.coh_n||0, upgN: uc.upg_n||0, cohNP: up.coh_n||0, upgNP: up.upg_n||0 };
+  bqQuery_(widgetsDailySql_(mapLo, mapHi, lo, hi)).forEach(function (r) {
+    var x = slot(r.wkey), i = di[r.d]; if (i == null) return;
+    x.v[i] = r.v; x.b[i] = r.b; x.o[i] = r.o; x.s[i] = r.s;
   });
-  var out = { generated_at: stamp,
-    week: { from: iso_(wMid), to: iso_(wHi) }, prev: { from: iso_(wLo), to: iso_(addDays_(wMid,-1)) },
-    upg_window: { from: iso_(curLo), to: iso_(curHi), prev_from: iso_(prevLo), prev_to: iso_(addDays_(curLo,-1)) },
-    widgets: widgets };
-  var ex = ghGetJson_('dashboard/data/widgets_weekly.json');
-  ghPutFile_('dashboard/data/widgets_weekly.json', JSON.stringify(out), 'data: widgets weekly refresh', ex && ex.sha);
-  Logger.log('widgets weekly: %s виджетов', widgets.length);
+  bqQuery_(widgetsCohSql_(mapLo, mapHi, scanLo, hi, dates[0])).forEach(function (r) {
+    if (!W[r.wkey]) return;
+    var i = di[r.d]; if (i == null) return;
+    W[r.wkey].c[i] = r.c; W[r.wkey].u[i] = r.u;
+  });
+  // лендинги виджетов (для подписи на карточке)
+  bqQuery_("WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) + " SELECT wkey, lslug FROM lmap").forEach(function (r) {
+    if (W[r.wkey]) W[r.wkey].landings.push(r.lslug);
+  });
+  var O = {};
+  bqQuery_(widgetsOthersSql_(mapLo, mapHi, lo, hi)).forEach(function (r) {
+    if (!O[r.wkey]) O[r.wkey] = zeros();
+    var i = di[r.d]; if (i != null) O[r.wkey][i] = r.v;
+  });
+
+  var out = { generated_at: stamp, dates: dates,
+    mature_cohort_to: iso_(addDays_(mature, -8)),
+    widgets: Object.keys(W).map(function (k) { return W[k]; }),
+    others: Object.keys(O).map(function (k) { return { slug: k, v: O[k] }; }) };
+  var ex = ghGetJson_('dashboard/data/widgets_daily.json');
+  ghPutFile_('dashboard/data/widgets_daily.json', JSON.stringify(out), 'data: widgets daily refresh', ex && ex.sha);
+  Logger.log('widgets daily: %s виджетов, %s прочих, %s дней', out.widgets.length, out.others.length, dates.length);
 }
 
 // ГЛАВНАЯ: запускать ежедневно — пересчитывает последние RECOMPUTE_DAYS зрелых дней
@@ -404,7 +424,7 @@ function runDaily() {
                                addDays_(mature, -(CFG.RECOMPUTE_DAYS - 1)).getTime()));
   if (from > mature) throw new Error('Окно пусто (проверь BUFFER/HISTORY_START)');
   refreshRange_(from, mature, null, 'daily refresh');
-  try { buildWidgetsWeekly_(); } catch (e) { Logger.log('widgets weekly error: ' + e); }
+  try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
 }
 
 // БЭКФИЛЛ ИСТОРИИ: гонит кусками по CHUNK_DAYS от свежего к старому, пока не дойдёт до HISTORY_START.
