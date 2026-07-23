@@ -290,30 +290,80 @@ function refreshRange_(fromDate, toDate, scanToDate, label) {
 
 // ---------------------------------------------------------------------------
 // ВИДЖЕТЫ ПО ДНЯМ → dashboard/data/widgets_daily.json (страница widgets.html)
-// СТРОГАЯ атрибуция: лендинг принадлежит виджету только при слаг-совпадении
-// (нормализация: срезаем 'ai-'; префикс-матч от 6 символов; override looksmaxing-ai→looksmax).
-// Лендинги без своего продукта — отдельный список others (без конверсий).
-function widgetsStrictMapCte_(loYmd, hiYmd) {
-  return "lmap AS (\n" +
-"  WITH ev28 AS (SELECT user_pseudo_id, (SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location') AS pl\n" +
-"    FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
-"    WHERE _TABLE_SUFFIX BETWEEN '" + loYmd + "' AND '" + hiYmd + "' AND event_name='page_view'\n" +
-"      AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
-"      AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
-"      AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user'))\n" +
-"  , land AS (SELECT REGEXP_EXTRACT(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/([^/?#]+)') AS lslug,\n" +
-"      COUNT(DISTINCT user_pseudo_id) AS visits FROM ev28 WHERE REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/')\n" +
-"      GROUP BY 1 HAVING lslug IS NOT NULL AND visits > 100)\n" +
-"  , prods AS (SELECT DISTINCT REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)') AS pslug FROM ev28\n" +
-"      WHERE REGEXP_CONTAINS(pl, r'overchat[.]ai/web/') AND NOT REGEXP_CONTAINS(pl, r'/web/c/'))\n" +
-"  , norm AS (SELECT l.lslug, p.pslug,\n" +
-"      IF(l.lslug='looksmaxing-ai','looksmax',REGEXP_REPLACE(l.lslug, r'^ai-','')) AS nl,\n" +
-"      REGEXP_REPLACE(p.pslug, r'^ai-','') AS np\n" +
-"    FROM land l CROSS JOIN prods p WHERE p.pslug IS NOT NULL)\n" +
-"  SELECT lslug, pslug AS wkey, pslug FROM norm\n" +
-"  WHERE nl = np OR (LENGTH(nl)>=6 AND LENGTH(np)>=6 AND (STARTS_WITH(nl,np) OR STARTS_WITH(np,nl)))\n" +
-"  QUALIFY ROW_NUMBER() OVER (PARTITION BY lslug ORDER BY LENGTH(pslug)) = 1\n" +
-")";
+// Карта v3 (23.07.2026) — КУРАТОРСКАЯ, не автоматическая: динамический слаг-матчинг
+// сверялся с неполным продукт-листом и терял виджеты (style-analysis, tarot-reading,
+// пресеты image-generator/* и др.). Правила карты:
+//  - продукт-лист построен из ПОЛНОГО трафика /web/ (все страницы >=20 юзеров/28д);
+//  - пресеты внутри image-generator / video-generator / ai-video-generator / ai-image-model —
+//    отдельные виджеты (2-сегментный pslug); невыделенные подпути падают в родителя (pfam-fallback);
+//  - алиасы лендингов подтверждены фактическими переходами юзеров (порог >=70% потока):
+//    color-analysis/makeup/hairstyle → style-analysis; tarot-card-reader → tarot-reading;
+//    photo-to-sims/gta → sims/gta-trend; twek+text-to-video → ai-video-generator (баг роутинга);
+//    skin-enhancer/hair-color/object-remover/... → пресеты image-generator/*;
+//  - новые лендинги сами появляются в others → оттуда добавляем в WIDGET_DEFS руками.
+var WIDGET_DEFS = [
+  { k:'ai-rate-my-face', n:'rate-my-face', l:['rate-my-face'] },
+  { k:'looksmax', n:'looksmax', l:['looksmaxing-ai'] },
+  { k:'ai-image-combiner', n:'image-combiner', l:['ai-image-combiner'] },
+  { k:'ai-baby-face-generator', n:'baby-face-generator', l:['baby-face-generator'] },
+  { k:'ai-kissing-generator', n:'kissing-generator', l:['ai-kissing-generator'] },
+  { k:'ai-face-swap-video', n:'face-swap-video', l:['face-swap-video','face-swap'] },
+  { k:'aspect-ratio-changer', n:'aspect-ratio-changer', l:['aspect-ratio-changer'] },
+  { k:'ai-passport-photo', n:'passport-photo', l:['ai-passport-photo'] },
+  { k:'ai-add-person-to-photo', n:'add-person-to-photo', l:['add-person-to-photo'] },
+  { k:'ai-attractiveness-test', n:'attractiveness-test', l:['ai-attractiveness-test'] },
+  { k:'ai-dance-generator', n:'dance-generator', l:['ai-dance-generator'] },
+  { k:'ai-video-extender', n:'video-extender', l:['ai-video-extender'] },
+  { k:'ai-palm-reading', n:'palm-reading', l:['palm-reading-scanner'] },
+  { k:'ai-soulmate', n:'soulmate', l:['ai-soulmate'] },
+  { k:'multiple-angles', n:'multiple-angles', l:['multiple-angles'] },
+  { k:'ai-face-shape-detector', n:'face-shape-detector', l:['ai-face-shape-detector'] },
+  { k:'ai-stadium-trend', n:'stadium-trend', l:['ai-stadium-trend'] },
+  { k:'ai-twerk-generator', n:'twerk-generator', l:['ai-twerk-generator'] },
+  { k:'image-generator', n:'image-generator', l:['ai-image-generator','ai-pranks'] },
+  { k:'ai-selfie-generator', n:'selfie-generator', l:['ai-selfie-generator'] },
+  { k:'ai-cartoonizer', n:'cartoonizer', l:['ai-cartoonizer'] },
+  { k:'ai-handwriting-check', n:'handwriting-check', l:['ai-handwriting-check'] },
+  { k:'ai-video-generator', n:'ai-video-generator', l:['ai-video-generator','ai-twek-generator','text-to-video'] },
+  { k:'ai-style-analysis', n:'style-analysis', l:['ai-color-analysis','ai-makeup-generator','ai-hairstyle-changer'] },
+  { k:'ai-tarot-reading', n:'tarot-reading', l:['ai-tarot-card-reader'] },
+  { k:'ai-sims-2-trend', n:'sims-trend', l:['photo-to-sims-ai'] },
+  { k:'ai-gta-trend', n:'gta-trend', l:['photo-to-gta'] },
+  { k:'video-generator', n:'video-generator-hub', l:['ai-bikini-generator','tiktok-video-generator'] },
+  { k:'ai-image-model', n:'image-models-hub', l:['ai-meme-generator'] },
+  { k:'image-generator/ai-skin-enhancer', n:'skin-enhancer', l:['ai-skin-enhancer'] },
+  { k:'image-generator/hairstyle-changer', n:'hairstyle-changer', l:['ai-hair-color-changer'] },
+  { k:'image-generator/object-removal', n:'object-removal', l:['ai-object-remover'] },
+  { k:'image-generator/colorize-image', n:'colorize', l:['colorize-photo'] },
+  { k:'image-generator/unblur-ai', n:'unblur', l:['unblur-image','ai-sharpen-photo'] },
+  { k:'image-generator/old-photo-restoration', n:'photo-restoration', l:['ai-photo-restoration'] },
+  { k:'image-generator/ai-action-figure', n:'action-figure', l:['ai-action-figure-generator'] },
+  { k:'image-generator/video-upscaler', n:'video-upscaler', l:['ai-video-upscaler'] },
+  { k:'image-generator/edit-images', n:'photo-editor', l:['ai-photo-editor'] },
+  { k:'image-generator/baby-face-filter-image', n:'baby-filter', l:['baby-filter'] },
+  { k:'video-generator/Faceless-Reels', n:'faceless-reels', l:['faceless-reels'] },
+  { k:'TikTok-Dance-2', n:'tiktok-dance-2', l:[] },
+  { k:'ai-skin-analyzer', n:'skin-analyzer', l:[] },
+  { k:'ai-hug-generator', n:'hug-generator', l:[] },
+  { k:'ai-smile-generator', n:'smile-generator', l:[] },
+  { k:'ai-detector', n:'ai-detector', l:[] },
+  { k:'ai-humanizer', n:'humanizer', l:[] },
+  { k:'ai-family-photo-generator', n:'family-photo-generator', l:[] },
+  { k:'ai-pet-portrait-generator', n:'pet-portrait-generator', l:[] },
+  { k:'ai-bank-statement-analyzer', n:'bank-statement-analyzer', l:[] },
+  { k:'ai-hair-color-changer', n:'hair-color-changer', l:[] },
+  { k:'ai-paraphraser', n:'paraphraser', l:[] },
+  { k:'ai-girl-generator', n:'girl-generator', l:[] },
+  { k:'ai-email-generator', n:'email-generator', l:[] }
+];
+function widgetsMapCte_() {
+  var lrows = [], prows = [];
+  WIDGET_DEFS.forEach(function (w) {
+    w.l.forEach(function (l) { lrows.push("STRUCT('" + l + "' AS l,'" + w.k + "' AS w)"); });
+    prows.push("STRUCT('" + w.k + "' AS p,'" + w.k + "' AS w)");
+  });
+  return "lmap AS (SELECT * FROM UNNEST([" + lrows.join(',') + "])),\n" +
+         "pmap AS (SELECT * FROM UNNEST([" + prows.join(',') + "]))";
 }
 function widgetsBaseCte_(loYmd, hiYmd) {
   return ", wbase AS (SELECT user_pseudo_id, event_timestamp AS ts, event_name,\n" +
@@ -328,42 +378,48 @@ function widgetsBaseCte_(loYmd, hiYmd) {
 "    AND NOT (event_name != 'page_view' AND DATE(TIMESTAMP_MICROS(event_timestamp)) IN ('2026-06-06','2026-06-07','2026-06-08')))\n" +
 ", wev AS (SELECT wbase.*,\n" +
 "    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/([^/?#]+)'),'~') AS lslug,\n" +
-"    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/web/([^/?#]+)'),'~') AS pslug FROM wbase)";
+"    COALESCE(REGEXP_EXTRACT(pl, r'overchat[.]ai/web/((?:image-generator|video-generator|ai-video-generator|ai-image-model)/[^/?#]+|[^/?#]+)'),'~') AS pslug FROM wbase)\n" +
+", wev2 AS (SELECT *, REGEXP_EXTRACT(pslug, r'^([^/]+)') AS pfam FROM wev)";
 }
 function widgetsDailySql_(mapLo, mapHi, lo, hi) {
-  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) +
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsMapCte_() +
   widgetsBaseCte_(lo, hi) + "\n" +
-", tagged AS (SELECT m.wkey, e.d, e.user_pseudo_id, e.event_name,\n" +
-"    (e.lslug=m.lslug) AS on_land, (e.pslug=m.pslug) AS on_prod\n" +
-"  FROM wev e JOIN lmap m ON e.lslug=m.lslug OR e.pslug=m.pslug)\n" +
-", pu AS (SELECT wkey, d, user_pseudo_id,\n" +
-"    LOGICAL_OR(on_land AND event_name='page_view') AS s1,\n" +
-"    LOGICAL_OR(on_prod AND event_name='purchase_onetime') AS has_ot,\n" +
-"    LOGICAL_OR(on_prod AND event_name='subscription_started') AS has_sub\n" +
-"  FROM tagged GROUP BY 1,2,3)\n" +
-"SELECT wkey, d, COUNTIF(s1) AS v, COUNTIF(has_ot OR has_sub) AS b, COUNTIF(has_ot) AS o, COUNTIF(has_sub) AS s\n" +
+", tl AS (SELECT lm.w AS wkey, e.d, e.user_pseudo_id, TRUE AS iv, FALSE AS io, FALSE AS isb\n" +
+"    FROM wev2 e JOIN lmap lm ON e.lslug=lm.l WHERE e.event_name='page_view')\n" +
+", tp AS (SELECT COALESCE(pm.w, pf.w) AS wkey, e.d, e.user_pseudo_id, FALSE AS iv,\n" +
+"    e.event_name='purchase_onetime' AS io, e.event_name='subscription_started' AS isb\n" +
+"    FROM wev2 e\n" +
+"    LEFT JOIN pmap pm ON e.pslug=pm.p\n" +
+"    LEFT JOIN pmap pf ON pm.p IS NULL AND e.pfam=pf.p\n" +
+"    WHERE e.event_name IN ('purchase_onetime','subscription_started') AND COALESCE(pm.w,pf.w) IS NOT NULL)\n" +
+", pu AS (SELECT wkey, d, user_pseudo_id, LOGICAL_OR(iv) AS v, LOGICAL_OR(io) AS o, LOGICAL_OR(isb) AS s\n" +
+"    FROM (SELECT * FROM tl UNION ALL SELECT * FROM tp) GROUP BY 1,2,3)\n" +
+"SELECT wkey, d, COUNTIF(v) AS v, COUNTIF(o OR s) AS b, COUNTIF(o) AS o, COUNTIF(s) AS s\n" +
 "FROM pu GROUP BY 1,2";
 }
 function widgetsCohSql_(mapLo, mapHi, scanLo, hi, cohLo) {
-  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) +
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsMapCte_() +
   widgetsBaseCte_(scanLo, hi) + "\n" +
 ", firstot AS (SELECT user_pseudo_id, ARRAY_AGG(STRUCT(pslug, ts, d) ORDER BY ts LIMIT 1)[OFFSET(0)] AS f\n" +
-"  FROM wev WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
-", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM wev WHERE event_name='subscription_started' GROUP BY 1)\n" +
-"SELECT m.wkey, fo.f.d AS d, COUNT(DISTINCT fo.user_pseudo_id) AS c,\n" +
+"  FROM wev2 WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
+", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM wev2 WHERE event_name='subscription_started' GROUP BY 1)\n" +
+", fo2 AS (SELECT fo.user_pseudo_id, fo.f, COALESCE(pm.w, pf.w) AS wkey FROM firstot fo\n" +
+"    LEFT JOIN pmap pm ON fo.f.pslug=pm.p\n" +
+"    LEFT JOIN pmap pf ON pm.p IS NULL AND REGEXP_EXTRACT(fo.f.pslug, r'^([^/]+)')=pf.p)\n" +
+"SELECT fo.wkey, fo.f.d AS d, COUNT(DISTINCT fo.user_pseudo_id) AS c,\n" +
 "  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts AND s.sub_ts <= fo.f.ts + 7*86400*1000000, fo.user_pseudo_id, NULL)) AS u,\n" +
 "  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts, fo.user_pseudo_id, NULL)) AS w\n" +
-"FROM firstot fo JOIN lmap m ON fo.f.pslug = m.pslug\n" +
+"FROM fo2 fo\n" +
 "LEFT JOIN subs s ON s.user_pseudo_id = fo.user_pseudo_id\n" +
-"WHERE (s.sub_ts IS NULL OR s.sub_ts > fo.f.ts) AND fo.f.d >= '" + cohLo + "'\n" +
+"WHERE fo.wkey IS NOT NULL AND (s.sub_ts IS NULL OR s.sub_ts > fo.f.ts) AND fo.f.d >= '" + cohLo + "'\n" +
 "GROUP BY 1,2";
 }
 function widgetsOthersSql_(mapLo, mapHi, lo, hi) {
-  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) +
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsMapCte_() +
   widgetsBaseCte_(lo, hi) + "\n" +
 "SELECT e.lslug AS wkey, e.d, COUNT(DISTINCT e.user_pseudo_id) AS v\n" +
-"FROM wev e LEFT JOIN lmap m ON e.lslug = m.lslug\n" +
-"WHERE e.event_name='page_view' AND e.lslug != '~' AND m.lslug IS NULL\n" +
+"FROM wev2 e LEFT JOIN lmap m ON e.lslug = m.l\n" +
+"WHERE e.event_name='page_view' AND e.lslug != '~' AND m.l IS NULL\n" +
 "GROUP BY 1,2 HAVING v >= 5";
 }
 function buildWidgetsDaily_() {
@@ -372,36 +428,31 @@ function buildWidgetsDaily_() {
   var startDate = parseIso_('2026-06-01');
   var cap = addDays_(mature, -89);
   if (cap > startDate) startDate = cap;               // держим окно не длиннее 90 дней
-  var mapLo = ymd_(addDays_(mature, -27)), mapHi = ymd_(mature);
   var lo = ymd_(startDate), hi = ymd_(mature);
   var scanLo = ymd_(addDays_(startDate, -14));
+  // окно поиска pseudo_id исключённых юзеров = всё окно данных (иначе ранние девайсы не отсекаются)
+  var mapLo = scanLo, mapHi = hi;
 
   var dates = [];
   for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
   var di = {}; dates.forEach(function (d, i) { di[d] = i; });
 
-  var W = {};
-  function slot(k) {
-    if (!W[k]) {
-      var name = k.indexOf('ai-') === 0 ? k.substring(3) : k;
-      W[k] = { key: k, name: name, landings: [], v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros(), w: zeros() };
-    }
-    return W[k];
-  }
   function zeros(){ return dates.map(function(){ return 0; }); }
+  var W = {};
+  WIDGET_DEFS.forEach(function (def) {   // все виджеты карты присутствуют всегда, даже с нулями
+    W[def.k] = { key: def.k, name: def.n, landings: def.l.slice(),
+      v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros(), w: zeros() };
+  });
 
   bqQuery_(widgetsDailySql_(mapLo, mapHi, lo, hi)).forEach(function (r) {
-    var x = slot(r.wkey), i = di[r.d]; if (i == null) return;
+    var x = W[r.wkey]; if (!x) return;
+    var i = di[r.d]; if (i == null) return;
     x.v[i] = r.v; x.b[i] = r.b; x.o[i] = r.o; x.s[i] = r.s;
   });
   bqQuery_(widgetsCohSql_(mapLo, mapHi, scanLo, hi, dates[0])).forEach(function (r) {
     if (!W[r.wkey]) return;
     var i = di[r.d]; if (i == null) return;
     W[r.wkey].c[i] = r.c; W[r.wkey].u[i] = r.u; W[r.wkey].w[i] = r.w;
-  });
-  // лендинги виджетов (для подписи на карточке)
-  bqQuery_("WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) + " SELECT wkey, lslug FROM lmap").forEach(function (r) {
-    if (W[r.wkey]) W[r.wkey].landings.push(r.lslug);
   });
   var O = {};
   bqQuery_(widgetsOthersSql_(mapLo, mapHi, lo, hi)).forEach(function (r) {

@@ -183,3 +183,16 @@
 - **Всегда просить unified payments «со всеми колонками»**: там есть `package_code (metadata)` — точный план каждого one-off платежа (решает коллизию $2.99 НАДЁЖНЕЕ Description), `customer_user_id (metadata)` (заполнен ~36% — для чистки тестов дополнять email-фильтром @overchat), `widget_id`, `Customer ID`, UTM, диспут-поля.
 - **Платежи на платящего (Stripe, 01.06–22.07, Paid)**: медиана 1 (73% платят один раз), среднее 1.79. Разовые 68% юзеров (медиана 1, ср. 1.11); подписчики 32% (медиана 2, ср. 3.22). Горб на 7 платежах = weekly-подписчики, дожившие всё окно.
 - **🐋 КИТЫ на кредит-паках**: топ-кастомер — 105×package-studio = $2 654 за 7 недель; №2 — $820. Пакеты creator/studio покупают ДЕСЯТКАМИ одни и те же люди — сегмент китов существует и держится на кредит-паках.
+
+## Карта виджетов v3 — 23.07 (страница widgets.html, полный анализ лендингов)
+
+- **Причина пропусков в v2**: строгий матчинг сверялся с неполным продукт-листом (только топы переходов). Продукт-лист надо строить из ПОЛНОГО трафика `/web/` — так нашлись ai-style-analysis (1 558 юзеров/28д), ai-tarot-reading (1 300), ai-sims-2-trend, ai-gta-trend, ai-skin-analyzer, ai-hug-generator и др.
+- **Пресеты = отдельные виджеты**: `/web/image-generator/<preset>` и `/web/video-generator/<preset>` — самостоятельные виджеты (skin-enhancer 337 юзеров, object-removal 284, hairstyle-changer 136, Faceless-Reels 477…). pslug извлекать 2-сегментным регексом для семейств image-generator|video-generator|ai-video-generator|ai-image-model; невыделенные подпути падают в родителя.
+- **Алиасы лендингов (подтверждены переходами юзеров, порог ≥70%)**: color-analysis/makeup-generator/hairstyle-changer → ai-style-analysis (80/92/97%); tarot-card-reader → ai-tarot-reading (98%); photo-to-sims-ai → ai-sims-2-trend (100%); photo-to-gta → ai-gta-trend (96%); skin-enhancer → image-generator/ai-skin-enhancer; object-remover → object-removal; colorize-photo → colorize-image; unblur-image + ai-sharpen-photo → unblur-ai; photo-restoration → old-photo-restoration; action-figure-generator → ai-action-figure; video-upscaler → video-upscaler; photo-editor → edit-images; baby-filter → baby-face-filter-image; faceless-reels → video-generator/Faceless-Reels; meme-generator → ai-image-model (92% в Nano-Banana-2); pranks → image-generator (размазан по прank-пресетам).
+- **🐛 Баги роутинга лендингов (отдать девам)**:
+  1. `ai-twek-generator` (лендинг, опечатка в слаге) шлёт 76–83% юзеров в generic `ai-video-generator`, а НЕ в виджет твёрка (туда доходит 2%). Сам твёрк живёт на лендинге `ai-twerk-generator`.
+  2. `ai-hairstyle-changer` (лендинг) → 97% в ai-style-analysis, не в пресет причёсок.
+  3. `ai-hair-color-changer` (лендинг) → 55% в пресет image-generator/hairstyle-changer; отдельная страница `/web/ai-hair-color-changer` почти мертва (4%).
+  4. `ai-bikini-generator`, `tiktok-video-generator` → generic video-generator, своих пресетов нет.
+  5. `ai-couple-photo-maker` — виджета в продукте НЕТ вообще: трафик размазывается (32% Nano-Banana-2, 22% image-combiner). Либо завести виджет, либо роутить осмысленно.
+- **Карта теперь КУРАТОРСКАЯ** (константа WIDGET_DEFS в Code.gs, 53 виджета, вкл. 13 без лендинга — покупают из каталога: hug-generator 7 покупок/52д). Новые лендинги сами всплывают в others на странице → оттуда добавлять в WIDGET_DEFS.

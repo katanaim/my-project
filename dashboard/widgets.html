@@ -79,7 +79,7 @@
   <header>
     <div class="eyebrow">Overchat · Аналитика виджетов</div>
     <h1>Виджеты по периодам</h1>
-    <div class="sub">Виджет = его продукт-страница + СТРОГО его собственные лендинги (без приклеивания чужих). Все метрики пересчитываются под выбранный период и сравниваются с предыдущим периодом той же длины.</div>
+    <div class="sub">Виджет = его продукт-страница (пресеты внутри image-generator / video-generator выделены отдельными виджетами) + лендинги, чей трафик фактически приходит на этот виджет — строгий слаг-матчинг, а спорные случаи проверены по реальным переходам юзеров. Все метрики пересчитываются под выбранный период и сравниваются с предыдущим периодом той же длины.</div>
     <div class="stamp" id="stamp">загрузка…</div>
     <div class="nav"><a href="index.html">← Весь продукт по дням</a></div>
   </header>
@@ -102,21 +102,42 @@
   </div>
 
   <div id="error"></div>
+
+  <details class="err" style="padding:10px 18px">
+    <summary style="color:var(--amber)">⚠ Находки роутинга (лендинг ведёт не туда, куда назван)</summary>
+    <div style="margin-top:8px; line-height:1.7">
+      • <b>ai-twek-generator</b> (лендинг) отправляет 76–83% юзеров в generic <b>ai-video-generator</b>, а не в виджет твёрка — привязан к ai-video-generator; сам твёрк-виджет живёт на лендинге ai-twerk-generator. Фикс: перенаправить CTA твек-лендинга.<br>
+      • <b>ai-hairstyle-changer</b> (лендинг) → 97% в <b>ai-style-analysis</b>, а не в пресет причёсок.<br>
+      • <b>ai-hair-color-changer</b> (лендинг) → 55% в пресет <b>image-generator/hairstyle-changer</b>; своя страница ai-hair-color-changer почти мертва (4%).<br>
+      • <b>ai-bikini-generator</b> и <b>tiktok-video-generator</b> → generic <b>video-generator</b> (своих пресетов нет).<br>
+      • <b>ai-couple-photo-maker</b> — своего виджета в продукте нет: трафик размазывается (32% Nano-Banana-2, 22% image-combiner) — лежит в «без своего виджета».<br>
+      • <b>ai-meme-generator</b> → 92% в Nano-Banana-2 — привязан к хабу моделей (image-models-hub).
+    </div>
+  </details>
+
   <div class="grid" id="grid"></div>
 
   <details id="smallwrap" hidden>
-    <summary>Мелкий трафик (&lt;40 визитов/день в периоде) — конверсии дрожат</summary>
+    <summary>Мелкий трафик (&lt;40 визитов/день) и виджеты без лендинга — конверсии дрожат</summary>
     <div class="grid" id="grid_small" style="margin-top:10px"></div>
   </details>
 
+  <details id="sleepwrap" hidden>
+    <summary>Спящие виджеты — ни визитов, ни покупок за выбранный период</summary>
+    <div class="othwrap" id="sleep"></div>
+  </details>
+
   <details id="othwrap_d" hidden>
-    <summary>Лендинги без своего продукта (модели, витрины — конверсию к ним не атрибуцируем)</summary>
+    <summary>Лендинги без своего виджета (модели, витрины, размазанный трафик — конверсию не атрибуцируем)</summary>
     <div class="othwrap" id="others"></div>
   </details>
 
   <div class="foot" id="foot" hidden>
-    <b>Методология.</b> Лендинги привязаны к виджету строгим слаг-матчингом (combiner — только ai-image-combiner и т.д.);
-    страницы моделей и витрины без своего продукта вынесены в отдельный список без конверсий.
+    <b>Методология.</b> Продукт-лист построен из ПОЛНОГО трафика /web/ (не из топов переходов), пресеты внутри
+    image-generator и video-generator — отдельные виджеты (skin-enhancer, hairstyle-changer, object-removal и т.д.),
+    невыделенные пресеты падают в родительский generic-виджет. Лендинги привязаны строгим слаг-матчингом, спорные —
+    по фактическим переходам юзеров (порог ≥70% потока); лендинги без своего виджета вынесены в отдельный список без конверсий.
+    Виджеты без лендинга (покупают из каталога) показываются с прочерком в конверсии.
     <b>Визиты</b> за период = сумма дневных уников (вернувшийся в другой день юзер считается снова).
     <b>Конверсия</b> = покупатели на продукте виджета / визиты лендингов виджета, тот же период; Δ — к предыдущему периоду той же длины, в п.п.
     <b>Однораз→подписка</b> = из юзеров, чья ПЕРВАЯ одноразка куплена на этом виджете в выбранный период, доля оформивших
@@ -205,16 +226,23 @@ function card(w, cur, prv, rank, maxConv, days, fresh){
       + (fresh?`<span class="grow" title="когортам меньше 8 дней — апгрейды ещё капают, число будет расти">⏳ дорастёт</span>`:"")
       + `</div><div class="lbl2">однораз → подписка (внутри юзера, к сегодня)</div>`;
   }
+  const noLand = !w.landings.length;
+  const trafficHtml = noLand
+    ? `<span class="muted">без лендинга · вход из каталога/продукта</span>`
+    : `${fmt(cur.visits)} визитов за ${days} дн ${dspan(dvis,"%",0,sgVis)}`;
+  const heroHtml = noLand
+    ? `<span class="v num muted" style="font-size:22px">—</span>`
+    : `<span class="v num">${convS}</span>${pill(dconv,"п.п.",2,sgConv)}`;
   return `<div class="cardw">
     <div class="rank num">#${rank}</div>
     <div class="nm">${w.name}</div>
-    <div class="traffic num">${fmt(cur.visits)} визитов за ${days} дн ${dspan(dvis,"%",0,sgVis)}</div>
-    <div class="hero"><span class="v num">${convS}</span>${pill(dconv,"п.п.",2,sgConv)}</div>
+    <div class="traffic num">${trafficHtml}</div>
+    <div class="hero">${heroHtml}</div>
     <div class="lbl2">визит → покупка</div>
     <div class="bar"><i style="width:${barW}%"></i></div>
     <div class="row"><span>покупок: <b class="num">${fmt(cur.buys)}</b> <span class="muted num">(${fmt(cur.ot)}р/${fmt(cur.sub)}п)</span></span>${dspan(cur.buys-prv.buys,"",0,sgBuys)}</div>
     <div class="upgline">${upgHtml}</div>
-    <div class="lands" title="${w.landings.join(', ')}">${w.landings.join(' · ')}</div>
+    <div class="lands" title="${noLand?('продукт: '+w.key):w.landings.join(', ')}">${noLand?('продукт: '+w.key):w.landings.join(' · ')}</div>
   </div>`;
 }
 function render(){
@@ -231,11 +259,13 @@ function render(){
     c.classList.toggle("on", (d===0 && a===0 && b===DATA.dates.length-1) || (d>0 && days===d && b===DATA.dates.length-1));
   });
 
-  const items = DATA.widgets.map(w=>{
+  const all = DATA.widgets.map(w=>{
     const cur=agg(w,a,b);
     const prv=hasPrev?agg(w,pa,pb):{visits:0,buys:0,ot:0,sub:0,coh:0,upgNow:0,conv:null};
     return {w,cur,prv};
-  }).filter(x=>x.cur.visits>0);
+  });
+  const items = all.filter(x=>x.cur.visits>0 || x.cur.buys>0 || x.cur.coh>0);
+  const sleeping = all.filter(x=>!(x.cur.visits>0 || x.cur.buys>0 || x.cur.coh>0));
   const thr = 40*days;
   const big=items.filter(x=>x.cur.visits>=thr), small=items.filter(x=>x.cur.visits<thr);
   const key={
@@ -248,6 +278,9 @@ function render(){
   $("grid").innerHTML=big.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days,freshFlag)).join("");
   $("grid_small").innerHTML=small.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days,freshFlag)).join("");
   $("smallwrap").hidden=!small.length;
+
+  $("sleep").innerHTML=sleeping.map(x=>`<div class="othrow"><span>${x.w.name}</span><span class="muted">${x.w.landings.length?x.w.landings.join(', '):'без лендинга'}</span></div>`).join("");
+  $("sleepwrap").hidden=!sleeping.length;
 
   const oth=DATA.others.map(o=>({slug:o.slug, v:sum(o.v,a,b), vp:hasPrev?sum(o.v,pa,pb):0}))
     .filter(o=>o.v>0).sort((x,y)=>y.v-x.v);
