@@ -52,6 +52,9 @@
   .pill.up{color:var(--good); background:var(--goodbg)}
   .pill.down{color:var(--bad); background:var(--badbg)}
   .pill.flat{color:var(--ink-3); background:var(--border-soft)}
+  .hero2{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap}
+  .hero2 .v2{font-size:20px; font-weight:680; color:var(--violet); letter-spacing:-.01em}
+  .grow{font-size:10.5px; color:var(--amber); font-weight:650}
   .bar{height:4px; border-radius:2px; background:var(--border-soft); overflow:hidden}
   .bar i{display:block; height:100%; border-radius:2px; background:var(--teal); opacity:.85}
   .row{display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color:var(--ink-2); gap:6px}
@@ -116,8 +119,9 @@
     страницы моделей и витрины без своего продукта вынесены в отдельный список без конверсий.
     <b>Визиты</b> за период = сумма дневных уников (вернувшийся в другой день юзер считается снова).
     <b>Конверсия</b> = покупатели на продукте виджета / визиты лендингов виджета, тот же период; Δ — к предыдущему периоду той же длины, в п.п.
-    <b>Онетайм→Подп ≤7д</b> = когорты по дню ПЕРВОЙ одноразки на этом виджете, только дозревшие дни (≥8 дней назад);
-    если период целиком свежий — метрика честно молчит. <b>Значимость:</b> каждая дельта проверяется статистически (конверсии — z-тест двух долей, счётчики — пуассоновский тест):
+    <b>Однораз→подписка</b> = из юзеров, чья ПЕРВАЯ одноразка куплена на этом виджете в выбранный период, доля оформивших
+    подписку К СЕГОДНЯШНЕМУ ДНЮ (без ожидания зрелости). ⏳ «дорастёт» = когортам меньше 8 дней, апгрейды ещё капают —
+    число будет расти при каждом обновлении; сравнение со свежим периодом смещено вниз (у прошлого было больше времени) — это тоже учитывай. <b>Значимость:</b> каждая дельта проверяется статистически (конверсии — z-тест двух долей, счётчики — пуассоновский тест):
     цветное с ✓ = значимо (p&lt;0.05; ✓✓ = p&lt;0.01), серое «шум» = изменение в пределах случайности, «мало» = событий не хватает даже для теста;
     точный p-value — в подсказке при наведении. Тест-юзеры, стейдж, флуд 6–8.06 вычищены. Деньги-истина — Stripe.
     История с 01.06.2026 (раньше плоских purchase-событий не существовало).
@@ -155,11 +159,10 @@ function sigCount(c1,c2){
 const pstr=s=>s.tested?("p="+(s.p<0.001?"<0.001":s.p.toFixed(3))):"";
 function pct(a,b){ return b>0 ? a/b*100 : null; }
 
-function agg(w, a, b, matureIdx){
+function agg(w, a, b){
   const r = { visits:sum(w.v,a,b), buys:sum(w.b,a,b), ot:sum(w.o,a,b), sub:sum(w.s,a,b) };
-  const mb = Math.min(b, matureIdx);
-  r.coh = mb>=a ? sum(w.c,a,mb) : 0;
-  r.upg = mb>=a ? sum(w.u,a,mb) : 0;
+  r.coh = sum(w.c,a,b);          // когорта первых одноразок за период (все дни, без цензуры)
+  r.upgNow = sum(w.w||w.u,a,b);  // апгрейдов К СЕГОДНЯ (свежие дорастут)
   r.conv = pct(r.buys, r.visits);
   return r;
 }
@@ -183,7 +186,7 @@ function dspan(d, unit, dec, sg){
   if(!sg.sig) return `<span class="d flat" title="${pstr(sg)} — шум">${val}</span>`;
   return `<span class="d ${dir}" title="${pstr(sg)} — значимо">${val} ✓</span>`;
 }
-function card(w, cur, prv, rank, maxConv, days){
+function card(w, cur, prv, rank, maxConv, days, fresh){
   const convS = cur.conv==null ? "—" : cur.conv.toFixed(2)+"%";
   const dconv = (cur.conv!=null && prv.conv!=null) ? cur.conv-prv.conv : null;
   const dvis  = prv.visits>0 ? (cur.visits-prv.visits)/prv.visits*100 : null;
@@ -191,14 +194,16 @@ function card(w, cur, prv, rank, maxConv, days){
   const sgVis  = sigCount(cur.visits, prv.visits);
   const sgBuys = sigCount(cur.buys, prv.buys);
   const barW = (cur.conv!=null && maxConv>0) ? Math.max(2, cur.conv/maxConv*100) : 0;
-  const curUpg = pct(cur.upg, cur.coh), prvUpg = pct(prv.upg, prv.coh);
+  const curUpg = pct(cur.upgNow, cur.coh), prvUpg = pct(prv.upgNow, prv.coh);
   let upgHtml;
-  if (cur.coh===0) upgHtml = `однораз→подписка: <span class="muted">когорты не дозрели / нет одноразок</span>`;
-  else if (cur.coh<10) upgHtml = `однораз→подписка: <span class="muted num">${cur.upg}/${cur.coh} — мало данных</span>`;
+  if (cur.coh===0) upgHtml = `<div class="hero2"><span class="muted" style="font-size:12.5px">однораз→подписка: нет одноразок за период</span></div>`;
   else {
-    const dupg = (curUpg!=null && prvUpg!=null && prv.coh>=10) ? curUpg-prvUpg : null;
-    const sgUpg = sigProp(cur.upg, cur.coh, prv.upg, prv.coh);
-    upgHtml = `однораз→подписка ≤7д: <b>${curUpg.toFixed(1)}%</b> <span class="muted num">(${cur.upg}/${cur.coh})</span> ${dspan(dupg,"п.п.",1,sgUpg)}`;
+    const dupg = (curUpg!=null && prvUpg!=null && prv.coh>=10 && cur.coh>=10) ? curUpg-prvUpg : null;
+    const sgUpg = sigProp(cur.upgNow, cur.coh, prv.upgNow, prv.coh);
+    upgHtml = `<div class="hero2"><span class="v2 num">${curUpg.toFixed(1)}%</span>${pill(dupg,"п.п.",1,sgUpg)}`
+      + `<span class="muted num" style="font-size:11.5px">${cur.upgNow}/${cur.coh}</span>`
+      + (fresh?`<span class="grow" title="когортам меньше 8 дней — апгрейды ещё капают, число будет расти">⏳ дорастёт</span>`:"")
+      + `</div><div class="lbl2">однораз → подписка (внутри юзера, к сегодня)</div>`;
   }
   return `<div class="cardw">
     <div class="rank num">#${rank}</div>
@@ -208,7 +213,7 @@ function card(w, cur, prv, rank, maxConv, days){
     <div class="lbl2">визит → покупка</div>
     <div class="bar"><i style="width:${barW}%"></i></div>
     <div class="row"><span>покупок: <b class="num">${fmt(cur.buys)}</b> <span class="muted num">(${fmt(cur.ot)}р/${fmt(cur.sub)}п)</span></span>${dspan(cur.buys-prv.buys,"",0,sgBuys)}</div>
-    <div class="row upgline"><span class="num">${upgHtml}</span></div>
+    <div class="upgline">${upgHtml}</div>
     <div class="lands" title="${w.landings.join(', ')}">${w.landings.join(' · ')}</div>
   </div>`;
 }
@@ -217,9 +222,9 @@ function render(){
   const a=DI[from], b=DI[to];
   if(a==null||b==null||a>b) return;
   const days=b-a+1;
+  const freshFlag = b > DATA.dates.length-1-8;   // диапазон задевает последние 8 дней — апгрейды дорастут
   const pa=Math.max(0,a-days), pb=a-1;
   const hasPrev = pb>=pa && pb>=0;
-  const matureIdx = DI[DATA.mature_cohort_to] ?? -1;
 
   document.querySelectorAll(".chip[data-days]").forEach(c=>{
     const d=+c.dataset.days;
@@ -227,21 +232,21 @@ function render(){
   });
 
   const items = DATA.widgets.map(w=>{
-    const cur=agg(w,a,b,matureIdx);
-    const prv=hasPrev?agg(w,pa,pb,matureIdx):{visits:0,buys:0,ot:0,sub:0,coh:0,upg:0,conv:null};
+    const cur=agg(w,a,b);
+    const prv=hasPrev?agg(w,pa,pb):{visits:0,buys:0,ot:0,sub:0,coh:0,upgNow:0,conv:null};
     return {w,cur,prv};
   }).filter(x=>x.cur.visits>0);
   const thr = 40*days;
   const big=items.filter(x=>x.cur.visits>=thr), small=items.filter(x=>x.cur.visits<thr);
   const key={
     conv:x=>x.cur.conv??-1, visits:x=>x.cur.visits, buys:x=>x.cur.buys,
-    upg:x=>(x.cur.coh>=10? pct(x.cur.upg,x.cur.coh) : -1),
+    upg:x=>(x.cur.coh>=10? pct(x.cur.upgNow,x.cur.coh) : -1),
     delta:x=>((x.cur.conv!=null&&x.prv.conv!=null)?x.cur.conv-x.prv.conv:-999)
   }[SORT];
   big.sort((x,y)=>key(y)-key(x)); small.sort((x,y)=>key(y)-key(x));
   const maxConv=Math.max(0,...big.map(x=>x.cur.conv||0));
-  $("grid").innerHTML=big.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days)).join("");
-  $("grid_small").innerHTML=small.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days)).join("");
+  $("grid").innerHTML=big.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days,freshFlag)).join("");
+  $("grid_small").innerHTML=small.map((x,i)=>card(x.w,x.cur,x.prv,i+1,maxConv,days,freshFlag)).join("");
   $("smallwrap").hidden=!small.length;
 
   const oth=DATA.others.map(o=>({slug:o.slug, v:sum(o.v,a,b), vp:hasPrev?sum(o.v,pa,pb):0}))
@@ -253,7 +258,8 @@ function render(){
   $("othwrap_d").hidden=!oth.length;
 
   const f=s=>s.slice(5).split("-").reverse().join(".");
-  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн) vs предыдущие ${days} дн · апгрейд-когорты зрелы по ${f(DATA.mature_cohort_to)} · обновляется ежедневно`;
+  $("stamp").textContent=`Период ${f(from)}–${f(to)} (${days} дн) vs предыдущие ${days} дн`+
+    ` · апгрейд считается к сегодня (свежие когорты дорастут)`+` · обновляется ежедневно`;
 }
 function setRange(fromIso,toIso){ $("f_from").value=fromIso; $("f_to").value=toIso; render(); }
 

@@ -351,7 +351,8 @@ function widgetsCohSql_(mapLo, mapHi, scanLo, hi, cohLo) {
 "  FROM wev WHERE event_name='purchase_onetime' GROUP BY 1)\n" +
 ", subs AS (SELECT user_pseudo_id, MIN(ts) AS sub_ts FROM wev WHERE event_name='subscription_started' GROUP BY 1)\n" +
 "SELECT m.wkey, fo.f.d AS d, COUNT(DISTINCT fo.user_pseudo_id) AS c,\n" +
-"  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts AND s.sub_ts <= fo.f.ts + 7*86400*1000000, fo.user_pseudo_id, NULL)) AS u\n" +
+"  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts AND s.sub_ts <= fo.f.ts + 7*86400*1000000, fo.user_pseudo_id, NULL)) AS u,\n" +
+"  COUNT(DISTINCT IF(s.sub_ts IS NOT NULL AND s.sub_ts > fo.f.ts, fo.user_pseudo_id, NULL)) AS w\n" +
 "FROM firstot fo JOIN lmap m ON fo.f.pslug = m.pslug\n" +
 "LEFT JOIN subs s ON s.user_pseudo_id = fo.user_pseudo_id\n" +
 "WHERE (s.sub_ts IS NULL OR s.sub_ts > fo.f.ts) AND fo.f.d >= '" + cohLo + "'\n" +
@@ -383,7 +384,7 @@ function buildWidgetsDaily_() {
   function slot(k) {
     if (!W[k]) {
       var name = k.indexOf('ai-') === 0 ? k.substring(3) : k;
-      W[k] = { key: k, name: name, landings: [], v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros() };
+      W[k] = { key: k, name: name, landings: [], v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros(), w: zeros() };
     }
     return W[k];
   }
@@ -396,7 +397,7 @@ function buildWidgetsDaily_() {
   bqQuery_(widgetsCohSql_(mapLo, mapHi, scanLo, hi, dates[0])).forEach(function (r) {
     if (!W[r.wkey]) return;
     var i = di[r.d]; if (i == null) return;
-    W[r.wkey].c[i] = r.c; W[r.wkey].u[i] = r.u;
+    W[r.wkey].c[i] = r.c; W[r.wkey].u[i] = r.u; W[r.wkey].w[i] = r.w;
   });
   // лендинги виджетов (для подписи на карточке)
   bqQuery_("WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsStrictMapCte_(mapLo, mapHi) + " SELECT wkey, lslug FROM lmap").forEach(function (r) {
