@@ -744,8 +744,7 @@ function rmfMetricsSql_(lo, hi) {
   return "WITH " + excludedCte_(lo, hi) + lmBaseCte_(lo, hi) + "\n" +
 ", m AS (SELECT d, dv, user_pseudo_id, CASE\n" +
 "    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + RMF_LAND + "') THEN 'land'\n" +
-"    WHEN event_name='ai_face_rater_upload_success' THEN 'fr_upload'\n" +   // онбординг: загрузка фото в виджете лендинга (с 31.05)
-"    WHEN event_name='ai_face_rater_click_generate' THEN 'fr_gen'\n" +      // онбординг: нажал «оценить» в виджете лендинга
+// легаси-виджет лендинга (ai_face_rater upload/generate) выпилен продуктом к 20.07 — из воронки убран
 "    WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'prod'\n" +
 "    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='sign up view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'wall'\n" +
 "    WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='get feature view' AND REGEXP_CONTAINS(pl, r'" + RMF_PAGE + "') THEN 'pay_view'\n" +
@@ -839,7 +838,7 @@ function buildWidgetRMF_() {
   function tri() { return { a: zeros(), m: zeros(), d: zeros() }; }
   function put(obj, r, field) { if (obj[r.dvx] && di[r.d] != null) obj[r.dvx][di[r.d]] = r[field]; }
 
-  var SKEYS = ['land','fr_upload','fr_gen','prod','wall','reg','pay_view','lastchance','buy_ot','buy_sub','genreq','coh','upg'];
+  var SKEYS = ['land','prod','wall','reg','pay_view','lastchance','buy_ot','buy_sub','genreq','coh','upg'];
   var series = {}; SKEYS.forEach(function (k) { series[k] = tri(); });
   bqQuery_(rmfMetricsSql_(lo, hi)).forEach(function (r) { if (series[r.metric]) put(series[r.metric], r, 'u'); });
   bqQuery_(rmfRegSql_(lo, hi)).forEach(function (r) { put(series.reg, r, 'reg_u'); });
@@ -864,16 +863,14 @@ function buildWidgetRMF_() {
   });
   var out = { generated_at: stamp, key: 'ai-rate-my-face', name: 'rate-my-face', track_from: '2026-06-01',
     dev_split: true, dates: dates, series: series,
-    funnel_steps: [['land','Визит лендинга','teal'],['fr_upload','Загрузил фото (виджет лендинга)','teal'],
-      ['fr_gen','Нажал «оценить»','teal'],['prod','Открыл продукт','teal'],
+    funnel_steps: [['land','Визит лендинга','teal'],['prod','Открыл продукт','teal'],
       ['wall','Увидел рега-стену','teal'],['reg','Зарегался (≤24ч)','teal'],
       ['pay_view','Увидел пейволл','amber'],['lastchance','Увидел last-chance оффер','amber'],
       ['buy','Купил (однораз+подписка)','violet'],['genreq','Запросил генерацию','violet']],
-    funnel_hint: 'Дневные уники по каждому шагу за период · «% пред» = конверсия с предыдущего шага. Онбординг rate-my-face ' +
-      'живёт в ВИДЖЕТЕ-ОЦЕНЩИКЕ на лендинге (ai_face_rater): «загрузил фото» и «нажал оценить» — это он, с 31.05. Виджет ' +
-      'НЕОБЯЗАТЕЛЕН: часть юзеров кликает в продукт напрямую, поэтому эти два шага ниже визитов лендинга/продукта — это не дроп-офф, ' +
-      'а альтернативный путь входа; upload_success недосчитывает относительно click_generate. Рега-стена (sign up view) занижена ' +
-      'трекингом ~15–20%. Генерация идёт ПОСЛЕ покупки — полный рейтинг разблокируется оплатой.',
+    funnel_hint: 'Дневные уники по каждому шагу за период · «% пред» = конверсия с предыдущего шага. ' +
+      'Загрузка фото и «оценить» на лендинге были ЛЕГАСИ-виджетом (выпилен, к 20.07 обнулился) — убраны из воронки; ' +
+      'теперь фото грузят уже в продукте. Рега-стена (sign up view) показывается не только после загрузки и занижена трекингом ~15–20%. ' +
+      'Генерация идёт ПОСЛЕ покупки — полный рейтинг разблокируется оплатой.',
     src: src, src_buy: srcBuy, ttb: ttb,
     trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
   var ex = ghGetJson_('dashboard/data/widget_ai-rate-my-face.json');
