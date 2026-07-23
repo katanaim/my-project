@@ -507,8 +507,8 @@ function lmMetricsSql_(lo, hi) {
 ", m AS (SELECT d, user_pseudo_id, CASE\n" +
 "  WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/(?:image|video|text|chat|models)/looksmaxing-ai([/?#]|$)') THEN 'land'\n" +
 "  WHEN event_name='page_view' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'prod'\n" +
-"  WHEN event_name='overchat' AND cat='looksmax' AND act='funnel-step-view' AND lbl='age' THEN 'quiz_start'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='funnel-step-view' AND lbl='scan' THEN 'quiz_scan'\n" +
+"  WHEN event_name='overchat' AND cat='looksmax' AND act='funnel-step-view' THEN 'quiz_start'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='photo-upload' AND lbl='front' THEN 'photo_front'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='photo-upload' AND lbl='side' THEN 'photo_side'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='generate-click' THEN 'gen'\n" +
@@ -516,9 +516,8 @@ function lmMetricsSql_(lo, hi) {
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='scan-complete' AND lbl='success' THEN 'scan_ok'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='report-view' AND lbl='teaser' THEN 'teaser'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='unlock-tap' THEN 'unlock'\n" +
-"  WHEN event_name='overchat' AND ((cat='looksmax' AND act='credit-wall-show')\n" +
-"    OR (cat='chat' AND act='pop-up' AND lbl IN ('get feature view','credits paywall view')\n" +
-"        AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)'))) THEN 'pay_view'\n" +
+"  WHEN event_name='overchat' AND cat='chat' AND act='pop-up' AND lbl='get feature view'\n" +
+"    AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'pay_view'\n" +
 "  WHEN event_name='purchase_onetime' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'buy_ot'\n" +
 "  WHEN event_name='subscription_started' AND REGEXP_CONTAINS(pl, r'overchat[.]ai/web/looksmax([/?#]|$)') THEN 'buy_sub'\n" +
 "  WHEN event_name='overchat' AND cat='looksmax' AND act='report-view' AND lbl='full' THEN 'full'\n" +
@@ -615,7 +614,7 @@ function buildWidgetLooksmax_() {
   });
   var out = { generated_at: stamp, key: 'looksmax', name: 'looksmax', track_from: LM_TRACK_FROM,
     dates: dates, series: series,
-    quiz_order: ['age','fix','bugs','holdback','mirrors','rate','gap','growth','gender','math','ratio','ascended','scan'],
+    quiz_order: ['gender','age','fix','bugs','holdback','mirrors','rate','gap','growth','math','ratio','ascended','scan'],
     quiz: quiz, unlocks: unlocks,
     trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
   var ex = ghGetJson_('dashboard/data/widget_looksmax.json');
