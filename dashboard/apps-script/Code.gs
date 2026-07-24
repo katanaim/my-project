@@ -27,7 +27,8 @@ var CFG = {
   BUFFER_DAYS: 2,                           // последние N дней не берём (лаг экспорта)
   CHUNK_DAYS: 30,                           // размер куска бэкфилла (лимит Apps Script — 6 мин/запуск)
   CHUNK_LOOKAHEAD: 7,                       // при бэкфилле сканим +N дней вперёд, чтобы дозрели нижние шаги
-  COHORT_LOOKBACK: 14                       // сканим N дней НАЗАД от диапазона: возвращённец не считается новой когортой
+  COHORT_LOOKBACK: 14,                      // сканим N дней НАЗАД от диапазона: возвращённец не считается новой когортой
+  MAX_GB_PER_QUERY: 200                     // жёсткий потолок скана на ОДИН запрос (ГБ); дороже — запрос упадёт, деньги целы
 };
 
 // ---------------------------------------------------------------------------
@@ -187,7 +188,10 @@ function bqCell_(v) {
   return (typeof v === 'string' && /^-?\d+$/.test(v)) ? parseInt(v, 10) : v;
 }
 function bqQuery_(sql) {
-  var resp = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 300000 }, CFG.BQ_PROJECT);
+  // maximumBytesBilled — жёсткий потолок скана на запрос: если запрос попытается прочитать больше,
+  // он УПАДЁТ, а не спалит деньги. Защита от случайного дорогого запроса. CFG.MAX_GB_PER_QUERY можно менять.
+  var cap = String((CFG.MAX_GB_PER_QUERY || 200) * 1073741824);
+  var resp = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 300000, maximumBytesBilled: cap }, CFG.BQ_PROJECT);
   if (!resp.jobComplete) throw new Error('BQ job не завершился за timeout: ' + JSON.stringify(resp.jobReference));
   var fields = resp.schema.fields.map(function (f) { return f.name; });
   var all = [];
@@ -1034,6 +1038,15 @@ function runDaily() {
   if (from > mature) throw new Error('Окно пусто (проверь BUFFER/HISTORY_START)');
   refreshRange_(from, mature, null, 'daily refresh');
   try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
+  // ЭКОНОМИЯ BQ: тяжёлые деталки виджетов (каждая ~6-8 запросов на всю историю) пересобираем
+  // РАЗ В НЕДЕЛЮ, по понедельникам. В остальные дни daily-прогон лёгкий (только главный дашборд + карточки).
+  // Свежие деталки в любой момент — запусти runWidgetDetails() вручную.
+  if (new Date().getDay() === 1) runWidgetDetails();
+}
+
+// Пересобрать ВСЕ деталки виджетов (looksmax / rate-my-face / add-person).
+// Вызывается автоматически по понедельникам из runDaily; можно запускать руками для свежих данных.
+function runWidgetDetails() {
   try { buildWidgetLooksmax_(); } catch (e) { Logger.log('looksmax detail error: ' + e); }
   try { buildWidgetRMF_(); } catch (e) { Logger.log('rate-my-face detail error: ' + e); }
   try { buildWidgetAP_(); } catch (e) { Logger.log('add-person detail error: ' + e); }
