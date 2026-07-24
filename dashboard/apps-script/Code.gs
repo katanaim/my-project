@@ -641,17 +641,75 @@ function lmTtbSql_(lo, hi) {
 "SELECT CAST(DATE(TIMESTAMP_MICROS(fb.ts)) AS STRING) AS d, fb.dv, ROUND((fb.ts-fp.ts)/60000000,1) AS diff_min\n" +
 "FROM firstbuy fb JOIN firstprod fp USING(user_pseudo_id) WHERE fb.ts >= fp.ts";
 }
+// ---------------------------------------------------------------------------
+// ИНКРЕМЕНТАЛЬНОСТЬ деталок виджетов: каждый прогон пересчитывает в BQ только последние
+// RECOMPUTE_DAYS дней, а более старые дни берёт из ранее сохранённого JSON (по ДАТЕ, не по индексу —
+// устойчиво к сдвигу окна). Это корректно для дневных агрегатов «уники за день по событию» —
+// у них нет междневной зависимости. КОГОРТУ любимой конверсии (coh/upg) НЕ инкрементим:
+// «первая-в-жизни одноразка» требует полного лукбэка, иначе повторные покупатели задвоятся —
+// её считаем полным сканом каждый прогон (1 запрос из ~8). Исключение тест-юзеров — динамическое
+// (excludedCte_ пересчитывается на окне каждый прогон), новые pseudo_id тест-аккаунтов ловятся.
+function incWin_(oldJson, startDate, mature) {
+  var dates = [], di = {};
+  for (var d = new Date(startDate); d <= mature; d = addDays_(d, 1)) dates.push(iso_(d));
+  dates.forEach(function (x, i) { di[x] = i; });
+  var oldOk = oldJson && oldJson.dates && oldJson.dates.length &&
+              oldJson.dates[oldJson.dates.length - 1] >= iso_(addDays_(mature, -CFG.RECOMPUTE_DAYS));
+  var recFrom = oldOk ? addDays_(mature, -(CFG.RECOMPUTE_DAYS - 1)) : new Date(startDate);
+  if (recFrom < startDate) recFrom = new Date(startDate);
+  var oldDi = {}; if (oldJson && oldJson.dates) oldJson.dates.forEach(function (x, i) { oldDi[x] = i; });
+  return { dates: dates, di: di, recFromIso: iso_(recFrom), winFrom: recFrom, merge: !!oldOk, old: oldJson, oldDi: oldDi };
+}
+function blendArr_(fresh, oldArr, W) {   // окно из fresh, старьё из oldArr по дате
+  return W.dates.map(function (dt, i) {
+    if (dt >= W.recFromIso) return fresh[i] || 0;
+    var oi = W.oldDi[dt];
+    return (oldArr && oi != null) ? (oldArr[oi] || 0) : 0;
+  });
+}
+function blendTri_(fresh, oldT, W) {
+  var o = oldT || {};
+  return { a: blendArr_(fresh.a, o.a, W), m: blendArr_(fresh.m, o.m, W), d: blendArr_(fresh.d, o.d, W) };
+}
+function tri0_(n) { var z = function () { var a = []; for (var i = 0; i < n; i++) a.push(0); return a; }; return { a: z(), m: z(), d: z() }; }
+function blendDict_(freshD, oldD, W) {   // dict of tri, объединение ключей
+  var out = {}, o = oldD || {}, keys = {};
+  Object.keys(freshD).forEach(function (k) { keys[k] = 1; });
+  Object.keys(o).forEach(function (k) { keys[k] = 1; });
+  Object.keys(keys).forEach(function (k) { out[k] = blendTri_(freshD[k] || tri0_(W.dates.length), o[k], W); });
+  return out;
+}
+function blendTtb_(freshTtb, W) {   // [[idxНовый,мин,dv]]; старьё пере-индексируем по дате
+  var kept = (W.old && W.old.ttb ? W.old.ttb : []).map(function (e) { return [W.old.dates[e[0]], e[1], e[2]]; })
+    .filter(function (x) { return x[0] != null && x[0] < W.recFromIso && W.di[x[0]] != null; })
+    .map(function (x) { return [W.di[x[0]], x[1], x[2]]; });
+  var all = kept.concat(freshTtb);
+  all.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+  return all;
+}
+function blendTrans_(freshList, W) {   // list of {src,label,target,place, tri-поля}; склейка по src
+  var fields = ['u', 'bt_ot', 'bt_sub', 'ba_ot', 'ba_sub'], byS = {};
+  (W.old && W.old.trans ? W.old.trans : []).forEach(function (t) { byS[t.src] = { old: t }; });
+  freshList.forEach(function (t) { (byS[t.src] = byS[t.src] || {}).fresh = t; });
+  return Object.keys(byS).map(function (s) {
+    var f = byS[s].fresh, o = byS[s].old, meta = f || o, res = { src: s, label: meta.label, target: meta.target, place: meta.place };
+    fields.forEach(function (fl) { res[fl] = blendTri_((f && f[fl]) || tri0_(W.dates.length), o && o[fl], W); });
+    return res;
+  });
+}
+
 function buildWidgetLooksmax_() {
   var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
   var startDate = parseIso_('2026-06-01');
   var cap = addDays_(mature, -89);
   if (cap > startDate) startDate = cap;
-  var lo = ymd_(startDate), hi = ymd_(mature);
 
-  var dates = [];
-  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
-  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
+  var gh = ghGetJson_('dashboard/data/widget_looksmax.json');
+  var oldJson = gh && gh.json;
+  var W = incWin_(oldJson, startDate, mature);
+  var dates = W.dates, di = W.di;
+  var lo = ymd_(W.winFrom), hi = ymd_(mature);   // ОКНО для не-когортных запросов (дёшево)
   function zeros() { return dates.map(function () { return 0; }); }
 
   // все ряды в трёх разрезах: a = все устройства, m = мобайл, d = десктоп (+планшеты)
@@ -699,6 +757,22 @@ function buildWidgetLooksmax_() {
     if (di[r.d] != null) ttb.push([di[r.d], Number(r.diff_min), r.dv]);
   });
   ttb.sort(function (x, y) { return x[0] - y[0] || x[1] - y[1]; });
+  var transList = Object.keys(tr).map(function (k) { return tr[k]; });
+
+  // склейка с историей: окно (последние RECOMPUTE_DAYS) — свежее, старьё — из прошлого JSON.
+  // coh/upg НЕ трогаем (они на полном скане каждый прогон).
+  if (W.merge) {
+    Object.keys(series).forEach(function (k) {
+      if (k !== 'coh' && k !== 'upg') series[k] = blendTri_(series[k], oldJson.series[k], W);
+    });
+    quiz = blendDict_(quiz, oldJson.quiz, W);
+    unlocks = blendDict_(unlocks, oldJson.unlocks, W);
+    unlockBuys = blendDict_(unlockBuys, oldJson.unlock_buys, W);
+    src = blendDict_(src, oldJson.src, W);
+    srcBuy = blendDict_(srcBuy, oldJson.src_buy, W);
+    ttb = blendTtb_(ttb, W);
+    transList = blendTrans_(transList, W);
+  }
 
   var out = { generated_at: stamp, key: 'looksmax', name: 'looksmax', track_from: LM_TRACK_FROM,
     dev_split: true, dates: dates, series: series,
@@ -712,9 +786,8 @@ function buildWidgetLooksmax_() {
     quiz_order: ['gender','age','fix','bugs','holdback','mirrors','rate','gap','growth','math','ratio','ascended','scan'],
     quiz: quiz, unlocks: unlocks, unlock_buys: unlockBuys,
     src: src, src_buy: srcBuy, ttb: ttb,
-    trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
-  var ex = ghGetJson_('dashboard/data/widget_looksmax.json');
-  ghPutFile_('dashboard/data/widget_looksmax.json', JSON.stringify(out), 'data: looksmax detail refresh', ex && ex.sha);
+    trans: transList };
+  ghPutFile_('dashboard/data/widget_looksmax.json', JSON.stringify(out), 'data: looksmax detail refresh', gh && gh.sha);
   Logger.log('looksmax detail: %s дней, %s переходов', dates.length, out.trans.length);
 }
 
@@ -829,10 +902,11 @@ function buildWidgetRMF_() {
   var startDate = parseIso_('2026-06-01');
   var cap = addDays_(mature, -89);
   if (cap > startDate) startDate = cap;
-  var lo = ymd_(startDate), hi = ymd_(mature);
-  var dates = [];
-  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
-  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
+  var gh = ghGetJson_('dashboard/data/widget_ai-rate-my-face.json');
+  var oldJson = gh && gh.json;
+  var W = incWin_(oldJson, startDate, mature);
+  var dates = W.dates, di = W.di;
+  var lo = ymd_(W.winFrom), hi = ymd_(mature);   // ОКНО для не-когортных запросов
   function zeros() { return dates.map(function () { return 0; }); }
   function tri() { return { a: zeros(), m: zeros(), d: zeros() }; }
   function put(obj, r, field) { if (obj[r.dvx] && di[r.d] != null) obj[r.dvx][di[r.d]] = r[field]; }
@@ -860,6 +934,16 @@ function buildWidgetRMF_() {
     }
     ['u','bt_ot','bt_sub','ba_ot','ba_sub'].forEach(function (f) { put(tr[r.src][f], r, f); });
   });
+  var transList = Object.keys(tr).map(function (k) { return tr[k]; });
+  if (W.merge) {
+    Object.keys(series).forEach(function (k) {
+      if (k !== 'coh' && k !== 'upg') series[k] = blendTri_(series[k], oldJson.series[k], W);
+    });
+    src = blendDict_(src, oldJson.src, W);
+    srcBuy = blendDict_(srcBuy, oldJson.src_buy, W);
+    ttb = blendTtb_(ttb, W);
+    transList = blendTrans_(transList, W);
+  }
   var out = { generated_at: stamp, key: 'ai-rate-my-face', name: 'rate-my-face', track_from: '2026-06-01',
     dev_split: true, dates: dates, series: series,
     funnel_steps: [['land','Визит лендинга','teal'],['prod','Открыл продукт','teal'],
@@ -870,9 +954,8 @@ function buildWidgetRMF_() {
       'её событие недосчитывает (баг трекинга), из-за чего ломала монотонность; смотри регистрацию в KPI «рега после стены» ' +
       '(это floor — реальная конверсия выше). Онбординг-виджет лендинга был легаси (выпилен). «% пред» = конверсия с предыдущего шага.',
     src: src, src_buy: srcBuy, ttb: ttb,
-    trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
-  var ex = ghGetJson_('dashboard/data/widget_ai-rate-my-face.json');
-  ghPutFile_('dashboard/data/widget_ai-rate-my-face.json', JSON.stringify(out), 'data: rate-my-face detail refresh', ex && ex.sha);
+    trans: transList };
+  ghPutFile_('dashboard/data/widget_ai-rate-my-face.json', JSON.stringify(out), 'data: rate-my-face detail refresh', gh && gh.sha);
   Logger.log('rate-my-face detail: %s дней, %s переходов', dates.length, out.trans.length);
 }
 
@@ -982,10 +1065,11 @@ function buildWidgetAP_() {
   var startDate = parseIso_('2026-06-01');
   var cap = addDays_(mature, -89);
   if (cap > startDate) startDate = cap;
-  var lo = ymd_(startDate), hi = ymd_(mature);
-  var dates = [];
-  for (var dcur = new Date(startDate); dcur <= mature; dcur = addDays_(dcur, 1)) dates.push(iso_(dcur));
-  var di = {}; dates.forEach(function (d, i) { di[d] = i; });
+  var gh = ghGetJson_('dashboard/data/widget_ai-add-person-to-photo.json');
+  var oldJson = gh && gh.json;
+  var W = incWin_(oldJson, startDate, mature);
+  var dates = W.dates, di = W.di;
+  var lo = ymd_(W.winFrom), hi = ymd_(mature);   // ОКНО для не-когортных запросов
   function zeros() { return dates.map(function () { return 0; }); }
   function tri() { return { a: zeros(), m: zeros(), d: zeros() }; }
   function put(obj, r, field) { if (obj[r.dvx] && di[r.d] != null) obj[r.dvx][di[r.d]] = r[field]; }
@@ -1013,6 +1097,16 @@ function buildWidgetAP_() {
     }
     ['u','bt_ot','bt_sub','ba_ot','ba_sub'].forEach(function (f) { put(tr[r.src][f], r, f); });
   });
+  var transList = Object.keys(tr).map(function (k) { return tr[k]; });
+  if (W.merge) {
+    Object.keys(series).forEach(function (k) {
+      if (k !== 'coh' && k !== 'upg') series[k] = blendTri_(series[k], oldJson.series[k], W);
+    });
+    src = blendDict_(src, oldJson.src, W);
+    srcBuy = blendDict_(srcBuy, oldJson.src_buy, W);
+    ttb = blendTtb_(ttb, W);
+    transList = blendTrans_(transList, W);
+  }
   var out = { generated_at: stamp, key: 'ai-add-person-to-photo', name: 'add-person-to-photo', track_from: '2026-06-01',
     dev_split: true, dates: dates, series: series,
     funnel_steps: [['land','Визит лендинга','teal'],['prod','Открыл продукт','teal'],
@@ -1024,9 +1118,8 @@ function buildWidgetAP_() {
       'KPI «рега после стены» (floor — из-за недосчёта стены реальная конверсия выше). Онбординг-виджет на лендинге — ' +
       'опциональный путь, вне воронки. «% пред» = конверсия с предыдущего шага. Покупка → генерация результата разблокируется оплатой.',
     src: src, src_buy: srcBuy, ttb: ttb,
-    trans: Object.keys(tr).map(function (k) { return tr[k]; }) };
-  var ex = ghGetJson_('dashboard/data/widget_ai-add-person-to-photo.json');
-  ghPutFile_('dashboard/data/widget_ai-add-person-to-photo.json', JSON.stringify(out), 'data: add-person-to-photo detail refresh', ex && ex.sha);
+    trans: transList };
+  ghPutFile_('dashboard/data/widget_ai-add-person-to-photo.json', JSON.stringify(out), 'data: add-person-to-photo detail refresh', gh && gh.sha);
   Logger.log('add-person detail: %s дней, %s переходов', dates.length, out.trans.length);
 }
 
@@ -1038,14 +1131,10 @@ function runDaily() {
   if (from > mature) throw new Error('Окно пусто (проверь BUFFER/HISTORY_START)');
   refreshRange_(from, mature, null, 'daily refresh');
   try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
-  // ЭКОНОМИЯ BQ: тяжёлые деталки виджетов (каждая ~6-8 запросов на всю историю) пересобираем
-  // РАЗ В НЕДЕЛЮ, по понедельникам. В остальные дни daily-прогон лёгкий (только главный дашборд + карточки).
-  // Свежие деталки в любой момент — запусти runWidgetDetails() вручную.
-  if (new Date().getDay() === 1) runWidgetDetails();
+  runWidgetDetails();   // деталки виджетов — ЕЖЕДНЕВНО, но инкрементально (пересчёт только окна, история из JSON)
 }
 
-// Пересобрать ВСЕ деталки виджетов (looksmax / rate-my-face / add-person).
-// Вызывается автоматически по понедельникам из runDaily; можно запускать руками для свежих данных.
+// Пересобрать ВСЕ деталки виджетов (looksmax / rate-my-face / add-person). Инкрементально: дёшево.
 function runWidgetDetails() {
   try { buildWidgetLooksmax_(); } catch (e) { Logger.log('looksmax detail error: ' + e); }
   try { buildWidgetRMF_(); } catch (e) { Logger.log('rate-my-face detail error: ' + e); }
