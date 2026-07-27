@@ -1123,6 +1123,57 @@ function buildWidgetAP_() {
   Logger.log('add-person detail: %s дней, %s переходов', dates.length, out.trans.length);
 }
 
+// ---------------------------------------------------------------------------
+// ГИПОТЕЗЫ: читает рабочую таблицу гипотез (Google Sheet) → dashboard/data/hypotheses.json.
+// Страница dashboard/hypotheses.html рендерит этот JSON. Колонки берутся по ЗАГОЛОВКУ
+// (не по позиции) — можно двигать столбцы в таблице. Требует Sheets-скоуп: при первом
+// запуске Apps Script спросит доступ к таблицам — разрешить один раз.
+var HYP_SHEET_ID = '11hTnnCj1LLEAMoE9d-UTzIx-n137YFk_5WHo4oJlkFQ';
+var HYP_GID = 1207324110;
+function hypStatus_(v) {
+  v = String(v || '');
+  if (v.indexOf('✅') >= 0) return 'confirmed';
+  if (v.indexOf('❌') >= 0) return 'refuted';
+  if (v.indexOf('⏳') >= 0) return 'waiting';
+  return 'idea';
+}
+function buildHypotheses_() {
+  var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  var ss = SpreadsheetApp.openById(HYP_SHEET_ID), sheets = ss.getSheets(), sh = null;
+  for (var i = 0; i < sheets.length; i++) if (sheets[i].getSheetId() === HYP_GID) { sh = sheets[i]; break; }
+  if (!sh) sh = sheets[0];
+  var vals = sh.getDataRange().getValues();
+  var hr = -1;
+  for (var r = 0; r < vals.length && hr < 0; r++)
+    for (var c = 0; c < vals[r].length; c++) if (String(vals[r][c]).indexOf('Что меняем') >= 0) { hr = r; break; }
+  if (hr < 0) throw new Error('заголовок «Что меняем» не найден в таблице');
+  var head = vals[hr].map(function (x) { return String(x); });
+  function col(sub) { for (var i = 0; i < head.length; i++) if (head[i].indexOf(sub) >= 0) return i; return -1; }
+  var iN = col('№'), iCh = col('Что меняем'), iAr = col('Область'), iMe = col('Метрика'),
+      iEx = col('Ожид'), iWho = col('Кто'), iDt = col('Дата'), iFa = col('Факт'), iVe = col('Вердикт');
+  function cell(row, i) {
+    if (i < 0 || i >= row.length) return '';
+    var v = row[i];
+    if (v instanceof Date) return Utilities.formatDate(v, 'UTC', 'dd.MM.yyyy');
+    return String(v == null ? '' : v).trim();
+  }
+  var rows = [];
+  for (var rr = hr + 1; rr < vals.length; rr++) {
+    var ch = cell(vals[rr], iCh);
+    if (!ch) continue;
+    var ve = cell(vals[rr], iVe);
+    rows.push({ n: cell(vals[rr], iN), change: ch, area: cell(vals[rr], iAr), metric: cell(vals[rr], iMe),
+      expected: cell(vals[rr], iEx), who: cell(vals[rr], iWho), date: cell(vals[rr], iDt),
+      fact: cell(vals[rr], iFa), verdict: ve, status: hypStatus_(ve) });
+  }
+  var out = { generated_at: stamp, source: 'Google Sheets — трекер гипотез',
+    sheet_url: 'https://docs.google.com/spreadsheets/d/' + HYP_SHEET_ID + '/edit?gid=' + HYP_GID,
+    rows: rows };
+  var ex = ghGetJson_('dashboard/data/hypotheses.json');
+  ghPutFile_('dashboard/data/hypotheses.json', JSON.stringify(out), 'data: hypotheses refresh', ex && ex.sha);
+  Logger.log('hypotheses: %s строк', rows.length);
+}
+
 // ГЛАВНАЯ: запускать ежедневно — пересчитывает последние RECOMPUTE_DAYS зрелых дней
 function runDaily() {
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
@@ -1132,6 +1183,7 @@ function runDaily() {
   refreshRange_(from, mature, null, 'daily refresh');
   try { buildWidgetsDaily_(); } catch (e) { Logger.log('widgets daily error: ' + e); }
   runWidgetDetails();   // деталки виджетов — ЕЖЕДНЕВНО, но инкрементально (пересчёт только окна, история из JSON)
+  try { buildHypotheses_(); } catch (e) { Logger.log('hypotheses error: ' + e); }   // гипотезы из Google Sheet
 }
 
 // Пересобрать ВСЕ деталки виджетов (looksmax / rate-my-face / add-person). Инкрементально: дёшево.
