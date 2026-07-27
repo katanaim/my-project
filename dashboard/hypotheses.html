@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overchat · Гипотезы и эксперименты</title>
+<style>
+  :root{
+    --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC;
+    --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
+    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --amber-line:#D97706;
+    --good:#15803D; --bad:#B91C1C;
+    --good-bg:#15803D14; --bad-bg:#B91C1C12; --amber-bg:#B4530910; --violet-bg:#7B68C812; --teal-bg:#0D948810;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30;
+    --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
+    --good:#4ADE80; --bad:#F87171;
+    --good-bg:#4ADE8016; --bad-bg:#F8717116; --amber-bg:#E8A33D16; --violet-bg:#8F7BDF16; --teal-bg:#10A39516;
+  }}
+  :root[data-theme=dark]{
+    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30;
+    --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
+    --good:#4ADE80; --bad:#F87171;
+    --good-bg:#4ADE8016; --bad-bg:#F8717116; --amber-bg:#E8A33D16; --violet-bg:#8F7BDF16; --teal-bg:#10A39516;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--surface); color:var(--ink);
+    font:14px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px; margin:0 auto; padding:36px 22px 64px; display:flex; flex-direction:column; gap:22px}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:28px; margin:6px 0 0; letter-spacing:-.01em}
+  .sub{color:var(--ink-2); margin-top:6px; max-width:74ch; font-size:13.5px}
+  .stamp{font-size:12px; color:var(--ink-3); margin-top:6px}
+  .stamp a{color:var(--teal); text-decoration:none; font-weight:600}
+  .nav{margin-top:8px; font-size:13px; display:flex; gap:16px}
+  .nav a{color:var(--teal); text-decoration:none; font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; cursor:pointer; transition:border-color .12s}
+  .kpi:hover{border-color:var(--ink-3)}
+  .kpi.on{border-color:var(--ink)}
+  .kpi .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); font-weight:600}
+  .kpi .v{font-size:27px; font-weight:660; margin-top:3px; letter-spacing:-.01em; line-height:1}
+  .kpi.c-confirmed .v{color:var(--good)} .kpi.c-refuted .v{color:var(--bad)}
+  .kpi.c-waiting .v{color:var(--amber)} .kpi.c-idea .v{color:var(--violet)}
+
+  .list{display:flex; flex-direction:column; gap:12px}
+  .exp{background:var(--card); border:1px solid var(--border); border-left-width:3px; border-radius:12px;
+    padding:14px 17px; display:flex; flex-direction:column; gap:9px}
+  .exp.confirmed{border-left-color:var(--good)} .exp.refuted{border-left-color:var(--bad)}
+  .exp.waiting{border-left-color:var(--amber)}  .exp.idea{border-left-color:var(--violet)}
+  .exp .top{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .badge-n{font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; color:var(--ink-3);
+    background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:1px 7px; min-width:24px; text-align:center}
+  .badge{font-size:11px; font-weight:650; border-radius:99px; padding:2px 10px; white-space:nowrap}
+  .badge.confirmed{color:var(--good); background:var(--good-bg)}
+  .badge.refuted{color:var(--bad); background:var(--bad-bg)}
+  .badge.waiting{color:var(--amber); background:var(--amber-bg)}
+  .badge.idea{color:var(--violet); background:var(--violet-bg)}
+  .chip{font-size:11.5px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border-soft);
+    border-radius:99px; padding:2px 9px; white-space:nowrap}
+  .who{font-size:11.5px; color:var(--ink-3); margin-left:auto; white-space:nowrap}
+  .title{font-size:15px; font-weight:640; line-height:1.4; color:var(--ink)}
+  .meta{display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px}
+  .meta .m{color:var(--ink-2)} .meta .m b{color:var(--ink); font-weight:600}
+  .meta .arrow{color:var(--ink-3)}
+  details.fact{margin-top:2px; border-top:1px solid var(--border-soft); padding-top:8px}
+  details.fact summary{cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink-2); list-style:none}
+  details.fact summary::-webkit-details-marker{display:none}
+  details.fact summary::before{content:"▸ "; color:var(--ink-3)}
+  details.fact[open] summary::before{content:"▾ "}
+  details.fact .body{margin-top:8px; display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--ink-2); line-height:1.55}
+  details.fact .body p{margin:0}
+  .empty{color:var(--ink-3); font-size:13px; padding:20px; text-align:center}
+  .foot{font-size:12px; color:var(--ink-3); line-height:1.6; border-top:1px solid var(--border); padding-top:14px; margin-top:6px}
+</style>
+<script src="gate.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Overchat · Продуктовые эксперименты</div>
+    <h1>Гипотезы и эксперименты</h1>
+    <div class="sub">Что меняем в продукте, какого эффекта ждём и что реально вышло. Тянется из рабочей таблицы гипотез — правь там, здесь обновится само.</div>
+    <div class="stamp" id="stamp">загрузка…</div>
+    <div class="nav">
+      <a href="index.html">← Воронка по суткам</a>
+      <a href="widgets.html">Виджеты за неделю</a>
+      <a id="srclink" href="#" target="_blank" rel="noopener">Открыть таблицу →</a>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+  <div class="list" id="list"><div class="empty">загрузка…</div></div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+var STATUS = {
+  confirmed:{label:'✅ Подтвердилось', order:0},
+  waiting:  {label:'⏳ Ждём данных',   order:1},
+  refuted:  {label:'❌ Не подтвердилось', order:2},
+  idea:     {label:'💡 В бэклоге',     order:3}
+};
+var KPI_ORDER = ['confirmed','waiting','refuted','idea'];
+var filter = 'all';
+var DATA = null;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function factParas(t){
+  // в таблице переносы строк схлопнулись в 2+ пробела — бьём обратно на абзацы
+  return String(t).split(/\s{2,}/).map(function(x){return x.trim();}).filter(Boolean);
+}
+
+function render(){
+  var rows = DATA.rows;
+  var counts = {confirmed:0,waiting:0,refuted:0,idea:0};
+  rows.forEach(function(r){ counts[r.status] = (counts[r.status]||0)+1; });
+
+  // KPI
+  var kpis = document.getElementById('kpis');
+  kpis.innerHTML =
+    '<div class="kpi'+(filter==='all'?' on':'')+'" data-f="all"><div class="l">Всего гипотез</div><div class="v num">'+rows.length+'</div></div>' +
+    KPI_ORDER.map(function(s){
+      return '<div class="kpi c-'+s+(filter===s?' on':'')+'" data-f="'+s+'">'+
+        '<div class="l">'+STATUS[s].label+'</div><div class="v num">'+(counts[s]||0)+'</div></div>';
+    }).join('');
+  Array.prototype.forEach.call(kpis.querySelectorAll('.kpi'), function(el){
+    el.onclick = function(){ filter = (filter===el.dataset.f && el.dataset.f!=='all') ? 'all' : el.dataset.f; render(); };
+  });
+
+  // список
+  var view = rows.filter(function(r){ return filter==='all' || r.status===filter; });
+  view.sort(function(a,b){ return STATUS[a.status].order - STATUS[b.status].order; });
+  var list = document.getElementById('list');
+  if(!view.length){ list.innerHTML = '<div class="empty">Нет гипотез в этом статусе.</div>'; return; }
+  list.innerHTML = view.map(function(r){
+    var meta = [];
+    if(r.metric)   meta.push('<span class="m"><b>Метрика:</b> '+esc(r.metric)+'</span>');
+    if(r.expected) meta.push('<span class="m"><span class="arrow">ждём</span> <b>'+esc(r.expected)+'</b></span>');
+    var factHtml = '';
+    if(r.fact){
+      factHtml = '<details class="fact"><summary>Что получилось</summary><div class="body">' +
+        factParas(r.fact).map(function(p){return '<p>'+esc(p)+'</p>';}).join('') + '</div></details>';
+    }
+    return '<div class="exp '+r.status+'">' +
+      '<div class="top">' +
+        '<span class="badge-n">'+(r.n?('#'+esc(r.n)):'·')+'</span>' +
+        '<span class="badge '+r.status+'">'+STATUS[r.status].label+'</span>' +
+        (r.area?'<span class="chip">'+esc(r.area)+'</span>':'') +
+        (r.who||r.date?'<span class="who">'+esc([r.who,r.date].filter(Boolean).join(' · '))+'</span>':'') +
+      '</div>' +
+      '<div class="title">'+esc(r.change)+'</div>' +
+      (meta.length?'<div class="meta">'+meta.join('')+'</div>':'') +
+      factHtml +
+    '</div>';
+  }).join('');
+}
+
+fetch('data/hypotheses.json?_='+Date.now()).then(function(r){return r.json();}).then(function(d){
+  DATA = d;
+  var st = document.getElementById('stamp');
+  var when = (d.generated_at||'').slice(0,10);
+  st.innerHTML = 'обновлено из таблицы: <b>'+esc(when)+'</b> · источник: '+esc(d.source||'Google Sheets');
+  var sl = document.getElementById('srclink'); if(d.sheet_url) sl.href = d.sheet_url; else sl.style.display='none';
+  document.getElementById('foot').textContent =
+    'Всего ' + d.rows.length + ' гипотез. Данные тянутся из рабочей таблицы гипотез автоматически (обновляется раз в сутки вместе с остальным дашбордом). Чтобы добавить или изменить гипотезу — правь таблицу.';
+  render();
+}).catch(function(e){
+  document.getElementById('list').innerHTML = '<div class="empty">Не удалось загрузить data/hypotheses.json — '+esc(e.message)+'</div>';
+});
+</script>
+</body>
+</html>
