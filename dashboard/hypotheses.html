@@ -6,77 +6,102 @@
 <title>Overchat · Гипотезы и эксперименты</title>
 <style>
   :root{
-    --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC;
+    --surface:#FBFBF9; --card:#FFFFFF; --col:#F4F5F1; --border:#E6E8E3; --border-soft:#EFF1EC;
     --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
-    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --amber-line:#D97706;
-    --good:#15803D; --bad:#B91C1C;
-    --good-bg:#15803D14; --bad-bg:#B91C1C12; --amber-bg:#B4530910; --violet-bg:#7B68C812; --teal-bg:#0D948810;
+    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309; --good:#15803D; --bad:#B91C1C;
+    --good-bg:#15803D14; --bad-bg:#B91C1C12; --amber-bg:#B4530910; --violet-bg:#7B68C812;
   }
   @media (prefers-color-scheme:dark){:root{
-    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30;
+    --surface:#14181B; --card:#1C2126; --col:#171B1F; --border:#2A3138; --border-soft:#232A30;
     --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
-    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
-    --good:#4ADE80; --bad:#F87171;
-    --good-bg:#4ADE8016; --bad-bg:#F8717116; --amber-bg:#E8A33D16; --violet-bg:#8F7BDF16; --teal-bg:#10A39516;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --good:#4ADE80; --bad:#F87171;
+    --good-bg:#4ADE8016; --bad-bg:#F8717116; --amber-bg:#E8A33D16; --violet-bg:#8F7BDF16;
   }}
   :root[data-theme=dark]{
-    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30;
+    --surface:#14181B; --card:#1C2126; --col:#171B1F; --border:#2A3138; --border-soft:#232A30;
     --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
-    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --amber-line:#E8A33D;
-    --good:#4ADE80; --bad:#F87171;
-    --good-bg:#4ADE8016; --bad-bg:#F8717116; --amber-bg:#E8A33D16; --violet-bg:#8F7BDF16; --teal-bg:#10A39516;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D; --good:#4ADE80; --bad:#F87171;
+    --good-bg:#4ADE8016; --bad-bg:#F8717116; --amber-bg:#E8A33D16; --violet-bg:#8F7BDF16;
   }
   *{box-sizing:border-box}
   body{margin:0; background:var(--surface); color:var(--ink);
     font:14px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
-  .wrap{max-width:900px; margin:0 auto; padding:36px 22px 64px; display:flex; flex-direction:column; gap:22px}
+  .wrap{max-width:1200px; margin:0 auto; padding:32px 20px 56px; display:flex; flex-direction:column; gap:18px}
   .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
-  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:28px; margin:6px 0 0; letter-spacing:-.01em}
-  .sub{color:var(--ink-2); margin-top:6px; max-width:74ch; font-size:13.5px}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:27px; margin:6px 0 0; letter-spacing:-.01em}
+  .sub{color:var(--ink-2); margin-top:6px; max-width:78ch; font-size:13.5px}
   .stamp{font-size:12px; color:var(--ink-3); margin-top:6px}
-  .stamp a{color:var(--teal); text-decoration:none; font-weight:600}
-  .nav{margin-top:8px; font-size:13px; display:flex; gap:16px}
+  .stamp b{color:var(--ink-2)}
+  .nav{margin-top:8px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap}
   .nav a{color:var(--teal); text-decoration:none; font-weight:600}
-  .num{font-variant-numeric:tabular-nums}
 
-  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px}
-  .kpi{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; cursor:pointer; transition:border-color .12s}
-  .kpi:hover{border-color:var(--ink-3)}
-  .kpi.on{border-color:var(--ink)}
-  .kpi .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); font-weight:600}
-  .kpi .v{font-size:27px; font-weight:660; margin-top:3px; letter-spacing:-.01em; line-height:1}
-  .kpi.c-confirmed .v{color:var(--good)} .kpi.c-refuted .v{color:var(--bad)}
-  .kpi.c-waiting .v{color:var(--amber)} .kpi.c-idea .v{color:var(--violet)}
+  .board{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-items:start}
+  @media (max-width:980px){.board{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:560px){.board{grid-template-columns:1fr}}
+  .col{background:var(--col); border:1px solid var(--border); border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:9px}
+  .col-head{display:flex; align-items:center; gap:8px; padding:3px 4px 6px}
+  .col-head .dot{width:9px; height:9px; border-radius:99px; flex:none}
+  .col-head .nm{font-size:12.5px; font-weight:700; letter-spacing:.01em}
+  .col-head .cnt{margin-left:auto; font-variant-numeric:tabular-nums; font-size:12px; font-weight:700; color:var(--ink-3);
+    background:var(--surface); border:1px solid var(--border); border-radius:99px; min-width:22px; text-align:center; padding:1px 7px}
+  .col.idea .dot{background:var(--violet)} .col.waiting .dot{background:var(--amber)}
+  .col.confirmed .dot{background:var(--good)} .col.refuted .dot{background:var(--bad)}
 
-  .list{display:flex; flex-direction:column; gap:12px}
-  .exp{background:var(--card); border:1px solid var(--border); border-left-width:3px; border-radius:12px;
-    padding:14px 17px; display:flex; flex-direction:column; gap:9px}
-  .exp.confirmed{border-left-color:var(--good)} .exp.refuted{border-left-color:var(--bad)}
-  .exp.waiting{border-left-color:var(--amber)}  .exp.idea{border-left-color:var(--violet)}
-  .exp .top{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-  .badge-n{font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; color:var(--ink-3);
-    background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:1px 7px; min-width:24px; text-align:center}
+  .kcard{background:var(--card); border:1px solid var(--border); border-left-width:3px; border-radius:10px;
+    padding:10px 11px; cursor:pointer; display:flex; flex-direction:column; gap:6px; transition:border-color .12s, transform .05s}
+  .kcard:hover{border-color:var(--ink-3)} .kcard:active{transform:scale(.99)}
+  .col.idea .kcard{border-left-color:var(--violet)} .col.waiting .kcard{border-left-color:var(--amber)}
+  .col.confirmed .kcard{border-left-color:var(--good)} .col.refuted .kcard{border-left-color:var(--bad)}
+  .kcard .kt{font-size:13px; font-weight:600; line-height:1.35; color:var(--ink);
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+  .kcard .kmeta{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+  .kcard .n{font-variant-numeric:tabular-nums; font-size:10.5px; font-weight:700; color:var(--ink-3);
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:5px; padding:0 5px}
+  .kcard .area{font-size:11px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border-soft);
+    border-radius:99px; padding:1px 8px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .kcard .exp{font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+  .kcard .exp b{color:var(--ink-2)}
+  .kcard .tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:1px}
+  .kcard .tag{font-size:10.5px; font-weight:600; border-radius:99px; padding:1px 7px}
+  .kcard .tag.data{color:var(--teal); border:1px solid var(--teal); background:transparent}
+  .kcard .tag.fact{color:var(--ink-3); background:var(--surface); border:1px solid var(--border-soft)}
+  .col .empty{font-size:12px; color:var(--ink-3); padding:8px 6px}
+
+  /* модалка */
+  .ov{position:fixed; inset:0; background:#0008; backdrop-filter:blur(2px); display:none; align-items:flex-start;
+    justify-content:center; padding:5vh 16px; z-index:50; overflow:auto}
+  .ov.on{display:flex}
+  .modal{background:var(--card); border:1px solid var(--border); border-radius:16px; width:min(660px,100%);
+    box-shadow:0 24px 70px #0006; padding:22px 24px 26px; position:relative}
+  .modal .x{position:absolute; top:14px; right:16px; cursor:pointer; font-size:20px; color:var(--ink-3); line-height:1;
+    background:none; border:0; padding:4px}
+  .modal .x:hover{color:var(--ink)}
+  .mbadges{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px}
   .badge{font-size:11px; font-weight:650; border-radius:99px; padding:2px 10px; white-space:nowrap}
-  .badge.confirmed{color:var(--good); background:var(--good-bg)}
-  .badge.refuted{color:var(--bad); background:var(--bad-bg)}
-  .badge.waiting{color:var(--amber); background:var(--amber-bg)}
-  .badge.idea{color:var(--violet); background:var(--violet-bg)}
-  .chip{font-size:11.5px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border-soft);
-    border-radius:99px; padding:2px 9px; white-space:nowrap}
-  .who{font-size:11.5px; color:var(--ink-3); margin-left:auto; white-space:nowrap}
-  .title{font-size:15px; font-weight:640; line-height:1.4; color:var(--ink)}
-  .meta{display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px}
-  .meta .m{color:var(--ink-2)} .meta .m b{color:var(--ink); font-weight:600}
-  .meta .arrow{color:var(--ink-3)}
-  details.fact{margin-top:2px; border-top:1px solid var(--border-soft); padding-top:8px}
-  details.fact summary{cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink-2); list-style:none}
-  details.fact summary::-webkit-details-marker{display:none}
-  details.fact summary::before{content:"▸ "; color:var(--ink-3)}
-  details.fact[open] summary::before{content:"▾ "}
-  details.fact .body{margin-top:8px; display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--ink-2); line-height:1.55}
-  details.fact .body p{margin:0}
-  .empty{color:var(--ink-3); font-size:13px; padding:20px; text-align:center}
-  .foot{font-size:12px; color:var(--ink-3); line-height:1.6; border-top:1px solid var(--border); padding-top:14px; margin-top:6px}
+  .badge.confirmed{color:var(--good); background:var(--good-bg)} .badge.refuted{color:var(--bad); background:var(--bad-bg)}
+  .badge.waiting{color:var(--amber); background:var(--amber-bg)} .badge.idea{color:var(--violet); background:var(--violet-bg)}
+  .modal h2{font-size:18px; font-weight:640; line-height:1.35; margin:0 0 10px; padding-right:24px}
+  .mmeta{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .chip{font-size:11.5px; color:var(--ink-2); background:var(--surface); border:1px solid var(--border-soft); border-radius:99px; padding:2px 9px}
+  .mrow{display:flex; gap:22px; flex-wrap:wrap; font-size:13px; padding:10px 0; border-top:1px solid var(--border-soft)}
+  .mrow .lbl{color:var(--ink-3); font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:600; margin-bottom:2px}
+  .mrow .m{flex:1; min-width:150px}
+  .mrow .m .v{color:var(--ink); font-weight:600}
+  .sect{margin-top:14px; padding-top:14px; border-top:1px solid var(--border)}
+  .sect .h{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-2); margin-bottom:8px; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
+  .sect .h .when{font-size:11px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--ink-3)}
+  .headline{font-size:13.5px; font-weight:600; color:var(--ink); border-left:3px solid var(--teal);
+    background:var(--surface); border-radius:0 8px 8px 0; padding:9px 12px; margin-bottom:12px; line-height:1.45}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; margin-bottom:12px}
+  .stat{background:var(--surface); border:1px solid var(--border-soft); border-radius:10px; padding:9px 11px}
+  .stat .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-3); font-weight:600; line-height:1.3}
+  .stat .v{font-size:17px; font-weight:680; margin-top:3px; letter-spacing:-.01em; color:var(--ink); font-variant-numeric:tabular-nums}
+  .stat .s{font-size:11px; color:var(--ink-3); margin-top:1px}
+  .body p{margin:0 0 8px; font-size:13px; color:var(--ink-2); line-height:1.6}
+  .body p:last-child{margin-bottom:0}
+  .fact{font-size:13px; color:var(--ink-2); line-height:1.6}
+  .fact p{margin:0 0 7px}
+  .foot{font-size:12px; color:var(--ink-3); line-height:1.6; border-top:1px solid var(--border); padding-top:14px; margin-top:4px}
 </style>
 <script src="gate.js"></script>
 </head>
@@ -85,7 +110,7 @@
   <header>
     <div class="eyebrow">Overchat · Продуктовые эксперименты</div>
     <h1>Гипотезы и эксперименты</h1>
-    <div class="sub">Что меняем в продукте, какого эффекта ждём и что реально вышло. Тянется из рабочей таблицы гипотез — правь там, здесь обновится само.</div>
+    <div class="sub">Что меняем в продукте, какого эффекта ждём и что реально вышло. Колонки — стадии: бэклог → в проверке → итог. Клик по карточке — подробности и разбор данными.</div>
     <div class="stamp" id="stamp">загрузка…</div>
     <div class="nav">
       <a href="index.html">← Воронка по суткам</a>
@@ -94,87 +119,110 @@
     </div>
   </header>
 
-  <div class="kpis" id="kpis"></div>
-  <div class="list" id="list"><div class="empty">загрузка…</div></div>
-
+  <div class="board" id="board"></div>
   <div class="foot" id="foot"></div>
 </div>
 
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+
 <script>
-var STATUS = {
-  confirmed:{label:'✅ Подтвердилось', order:0},
-  waiting:  {label:'⏳ Ждём данных',   order:1},
-  refuted:  {label:'❌ Не подтвердилось', order:2},
-  idea:     {label:'💡 В бэклоге',     order:3}
-};
-var KPI_ORDER = ['confirmed','waiting','refuted','idea'];
-var filter = 'all';
-var DATA = null;
+var COLS = [
+  {key:'idea',      nm:'💡 Бэклог'},
+  {key:'waiting',   nm:'⏳ Ждём данных'},
+  {key:'confirmed', nm:'✅ Подтвердилось'},
+  {key:'refuted',   nm:'❌ Не подтвердилось'}
+];
+var LABEL = {idea:'💡 В бэклоге', waiting:'⏳ Ждём данных', confirmed:'✅ Подтвердилось', refuted:'❌ Не подтвердилось'};
+var DATA=null, NOTES=[], VIEW=[];
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-
-function factParas(t){
-  // в таблице переносы строк схлопнулись в 2+ пробела — бьём обратно на абзацы
-  return String(t).split(/\s{2,}/).map(function(x){return x.trim();}).filter(Boolean);
+function paras(t){ return String(t).split(/\s{2,}|\n+/).map(function(x){return x.trim();}).filter(Boolean); }
+function noteFor(r){
+  var ch=(r.change||'').toLowerCase();
+  for(var i=0;i<NOTES.length;i++){ if(ch.indexOf((NOTES[i].match||'').toLowerCase())>=0) return NOTES[i]; }
+  return null;
 }
 
-function render(){
-  var rows = DATA.rows;
-  var counts = {confirmed:0,waiting:0,refuted:0,idea:0};
-  rows.forEach(function(r){ counts[r.status] = (counts[r.status]||0)+1; });
-
-  // KPI
-  var kpis = document.getElementById('kpis');
-  kpis.innerHTML =
-    '<div class="kpi'+(filter==='all'?' on':'')+'" data-f="all"><div class="l">Всего гипотез</div><div class="v num">'+rows.length+'</div></div>' +
-    KPI_ORDER.map(function(s){
-      return '<div class="kpi c-'+s+(filter===s?' on':'')+'" data-f="'+s+'">'+
-        '<div class="l">'+STATUS[s].label+'</div><div class="v num">'+(counts[s]||0)+'</div></div>';
-    }).join('');
-  Array.prototype.forEach.call(kpis.querySelectorAll('.kpi'), function(el){
-    el.onclick = function(){ filter = (filter===el.dataset.f && el.dataset.f!=='all') ? 'all' : el.dataset.f; render(); };
-  });
-
-  // список
-  var view = rows.filter(function(r){ return filter==='all' || r.status===filter; });
-  view.sort(function(a,b){ return STATUS[a.status].order - STATUS[b.status].order; });
-  var list = document.getElementById('list');
-  if(!view.length){ list.innerHTML = '<div class="empty">Нет гипотез в этом статусе.</div>'; return; }
-  list.innerHTML = view.map(function(r){
-    var meta = [];
-    if(r.metric)   meta.push('<span class="m"><b>Метрика:</b> '+esc(r.metric)+'</span>');
-    if(r.expected) meta.push('<span class="m"><span class="arrow">ждём</span> <b>'+esc(r.expected)+'</b></span>');
-    var factHtml = '';
-    if(r.fact){
-      factHtml = '<details class="fact"><summary>Что получилось</summary><div class="body">' +
-        factParas(r.fact).map(function(p){return '<p>'+esc(p)+'</p>';}).join('') + '</div></details>';
-    }
-    return '<div class="exp '+r.status+'">' +
-      '<div class="top">' +
-        '<span class="badge-n">'+(r.n?('#'+esc(r.n)):'·')+'</span>' +
-        '<span class="badge '+r.status+'">'+STATUS[r.status].label+'</span>' +
-        (r.area?'<span class="chip">'+esc(r.area)+'</span>':'') +
-        (r.who||r.date?'<span class="who">'+esc([r.who,r.date].filter(Boolean).join(' · '))+'</span>':'') +
-      '</div>' +
-      '<div class="title">'+esc(r.change)+'</div>' +
-      (meta.length?'<div class="meta">'+meta.join('')+'</div>':'') +
-      factHtml +
-    '</div>';
+function renderBoard(){
+  var byS={idea:[],waiting:[],confirmed:[],refuted:[]};
+  DATA.rows.forEach(function(r){ (byS[r.status]||byS.idea).push(r); });
+  var board=document.getElementById('board');
+  board.innerHTML = COLS.map(function(col){
+    var items=byS[col.key]||[];
+    var cards = items.length ? items.map(function(r){
+      var note=noteFor(r);
+      var tags='';
+      if(note) tags+='<span class="tag data">📊 разбор данными</span>';
+      else if(r.fact) tags+='<span class="tag fact">результат есть</span>';
+      var exp = r.expected ? '<span class="exp">ждём <b>'+esc(r.expected.length>34?r.expected.slice(0,34)+'…':r.expected)+'</b></span>' : '';
+      return '<div class="kcard" data-id="'+r._i+'">' +
+        '<div class="kt">'+esc(r.change)+'</div>' +
+        '<div class="kmeta">'+(r.n?'<span class="n">#'+esc(r.n)+'</span>':'')+
+          (r.area?'<span class="area">'+esc(r.area)+'</span>':'')+'</div>' +
+        (exp?'<div class="kmeta">'+exp+'</div>':'') +
+        (tags?'<div class="tags">'+tags+'</div>':'') +
+      '</div>';
+    }).join('') : '<div class="empty">пусто</div>';
+    return '<div class="col '+col.key+'">' +
+      '<div class="col-head"><span class="dot"></span><span class="nm">'+col.nm+'</span><span class="cnt">'+items.length+'</span></div>' +
+      cards + '</div>';
   }).join('');
+  Array.prototype.forEach.call(board.querySelectorAll('.kcard'), function(el){
+    el.onclick=function(){ openModal(DATA.rows[+el.dataset.id]); };
+  });
 }
 
-fetch('data/hypotheses.json?_='+Date.now()).then(function(r){return r.json();}).then(function(d){
-  DATA = d;
-  var st = document.getElementById('stamp');
-  var when = (d.generated_at||'').slice(0,10);
-  st.innerHTML = 'обновлено из таблицы: <b>'+esc(when)+'</b> · источник: '+esc(d.source||'Google Sheets');
-  var sl = document.getElementById('srclink'); if(d.sheet_url) sl.href = d.sheet_url; else sl.style.display='none';
-  document.getElementById('foot').textContent =
-    'Всего ' + d.rows.length + ' гипотез. Данные тянутся из рабочей таблицы гипотез автоматически (обновляется раз в сутки вместе с остальным дашбордом). Чтобы добавить или изменить гипотезу — правь таблицу.';
-  render();
+function openModal(r){
+  var note=noteFor(r);
+  var m=document.getElementById('modal');
+  var meta=[]; if(r.area)meta.push(esc(r.area)); if(r.who)meta.push('👤 '+esc(r.who)); if(r.date)meta.push('📅 '+esc(r.date));
+  var html='<button class="x" id="mx">✕</button>' +
+    '<div class="mbadges"><span class="badge '+r.status+'">'+LABEL[r.status]+'</span>'+(r.n?'<span class="chip">#'+esc(r.n)+'</span>':'')+'</div>' +
+    '<h2>'+esc(r.change)+'</h2>' +
+    (meta.length?'<div class="mmeta">'+meta.map(function(x){return '<span class="chip">'+x+'</span>';}).join('')+'</div>':'') +
+    '<div class="mrow">' +
+      (r.metric?'<div class="m"><div class="lbl">Метрика</div><div class="v">'+esc(r.metric)+'</div></div>':'') +
+      (r.expected?'<div class="m"><div class="lbl">Ожидаемый эффект</div><div class="v">'+esc(r.expected)+'</div></div>':'') +
+    '</div>';
+  if(r.fact){
+    html+='<div class="sect"><div class="h">Что получилось · из таблицы</div><div class="fact">' +
+      paras(r.fact).map(function(p){return '<p>'+esc(p)+'</p>';}).join('') + '</div></div>';
+  }
+  if(note){
+    html+='<div class="sect"><div class="h">📊 Разбор данными <span class="when">'+esc(note.window||'')+(note.updated?' · обновлено '+esc(note.updated):'')+'</span></div>';
+    if(note.headline) html+='<div class="headline">'+esc(note.headline)+'</div>';
+    if(note.stats&&note.stats.length){
+      html+='<div class="stats">'+note.stats.map(function(s){
+        return '<div class="stat"><div class="l">'+esc(s.label)+'</div><div class="v">'+esc(s.value)+'</div>'+(s.sub?'<div class="s">'+esc(s.sub)+'</div>':'')+'</div>';
+      }).join('')+'</div>';
+    }
+    if(note.body&&note.body.length){
+      html+='<div class="body">'+note.body.map(function(p){return '<p>'+esc(p)+'</p>';}).join('')+'</div>';
+    }
+    html+='</div>';
+  }
+  m.innerHTML=html;
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('mx').onclick=closeModal;
+}
+function closeModal(){ document.getElementById('ov').classList.remove('on'); }
+document.getElementById('ov').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeModal(); });
+
+Promise.all([
+  fetch('data/hypotheses.json?_='+Date.now()).then(function(r){return r.json();}),
+  fetch('data/hypotheses_notes.json?_='+Date.now()).then(function(r){return r.json();}).catch(function(){return {notes:[]};})
+]).then(function(res){
+  DATA=res[0]; NOTES=(res[1]&&res[1].notes)||[];
+  DATA.rows.forEach(function(r,i){ r._i=i; });
+  var st=document.getElementById('stamp');
+  st.innerHTML='обновлено из таблицы: <b>'+esc((DATA.generated_at||'').slice(0,10))+'</b> · '+DATA.rows.length+' гипотез · разбор данными на карточках с 📊';
+  var sl=document.getElementById('srclink'); if(DATA.sheet_url) sl.href=DATA.sheet_url; else sl.style.display='none';
+  document.getElementById('foot').textContent='Гипотезы тянутся из рабочей таблицы автоматически (раз в сутки). Разбор данными (📊) считается отдельно по BigQuery и дописывается вручную. Чтобы добавить/изменить гипотезу — правь таблицу.';
+  renderBoard();
 }).catch(function(e){
-  document.getElementById('list').innerHTML = '<div class="empty">Не удалось загрузить data/hypotheses.json — '+esc(e.message)+'</div>';
+  document.getElementById('board').innerHTML='<div class="empty">Не удалось загрузить data/hypotheses.json — '+esc(e.message)+'</div>';
 });
 </script>
 </body>
