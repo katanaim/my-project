@@ -320,6 +320,7 @@ var WIDGET_DEFS = [
   { k:'ai-video-extender', n:'video-extender', l:['ai-video-extender'] },
   { k:'ai-palm-reading', n:'palm-reading', l:['palm-reading-scanner'] },
   { k:'ai-soulmate', n:'soulmate', l:['ai-soulmate'] },
+  { k:'ai-compatibility-test', n:'compatibility-test', l:['compatibility-test'] },
   { k:'multiple-angles', n:'multiple-angles', l:['multiple-angles'] },
   { k:'ai-face-shape-detector', n:'face-shape-detector', l:['ai-face-shape-detector'] },
   { k:'ai-stadium-trend', n:'stadium-trend', l:['ai-stadium-trend'] },
