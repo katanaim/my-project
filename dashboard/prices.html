@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Overchat · Цены и маржа по виджетам</title>
+<style>
+  :root{
+    --surface:#FBFBF9; --card:#FFFFFF; --border:#E6E8E3; --border-soft:#EFF1EC; --grid:#EDEEE9;
+    --ink:#1A2320; --ink-2:#5A6662; --ink-3:#8B948F;
+    --teal:#0D9488; --violet:#7B68C8; --amber:#B45309;
+    --good:#15803D; --bad:#B91C1C; --goodbg:#15803D14; --badbg:#B91C1C12; --warnbg:#B4530912;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --surface:#14181B; --card:#1C2126; --border:#2A3138; --border-soft:#232A30; --grid:#262D33;
+    --ink:#E8ECEA; --ink-2:#96A19C; --ink-3:#6A756F;
+    --teal:#10A395; --violet:#8F7BDF; --amber:#E8A33D;
+    --good:#4ADE80; --bad:#F87171; --goodbg:#4ADE8018; --badbg:#F8717114; --warnbg:#E8A33D14;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--surface); color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px; margin:0 auto; padding:36px 22px 64px; display:flex; flex-direction:column; gap:18px}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
+  h1{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:28px; margin:6px 0 0; letter-spacing:-.01em}
+  h2{font-family:ui-serif,Georgia,serif; font-weight:600; font-size:18px; margin:0}
+  .sub{color:var(--ink-2); margin-top:6px; max-width:80ch; font-size:13.5px}
+  .stamp{font-size:12px; color:var(--ink-3); margin-top:5px}
+  .nav{font-size:13px; margin-top:8px} .nav a{color:var(--teal); text-decoration:none; font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+  .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--card);
+    border:1px solid var(--border); border-radius:12px; padding:10px 14px; position:sticky; top:8px; z-index:5}
+  .controls .lbl{font-size:12px; color:var(--ink-3); font-weight:600}
+  .controls input[type=date],.controls select{font:inherit; font-size:12.5px; padding:5px 8px;
+    border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--ink)}
+  .btn{font:inherit; font-size:12.5px; padding:5px 11px; border:1px solid var(--border); border-radius:7px;
+    background:var(--surface); color:var(--ink-2); cursor:pointer}
+  .btn:hover{background:var(--card)} .btn.on{background:var(--teal); border-color:var(--teal); color:#fff; font-weight:600}
+  .btn:focus-visible{outline:2px solid var(--teal); outline-offset:1px}
+  .spacer{flex:1 1 auto}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px}
+  .kpi .k{font-size:11.5px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase; font-weight:600}
+  .kpi .v{font-size:26px; font-variant-numeric:tabular-nums; margin-top:3px; letter-spacing:-.02em}
+  .kpi .d{font-size:12px; color:var(--ink-3); margin-top:2px}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px;
+    display:flex; flex-direction:column; gap:12px}
+  .scroll{overflow-x:auto; margin:0 -18px; padding:0 18px}
+  table{border-collapse:collapse; width:100%; min-width:900px; font-size:13px}
+  th{text-align:left; padding:8px 9px; color:var(--ink-3); font-size:11px; letter-spacing:.06em;
+     text-transform:uppercase; border-bottom:1px solid var(--border); white-space:nowrap; font-weight:600}
+  td{padding:8px 9px; border-bottom:1px solid var(--border-soft); vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  th.n,td.n{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums}
+  tr.tot td{border-top:2px solid var(--border); font-weight:600; background:var(--surface)}
+  .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--amber)}
+  .pill{display:inline-block; padding:1px 7px; border-radius:5px; font-size:11px; font-weight:600}
+  .p-good{background:var(--goodbg); color:var(--good)}
+  .p-warn{background:var(--warnbg); color:var(--amber)}
+  .p-bad{background:var(--badbg); color:var(--bad)}
+  .wname{font-weight:600} .wmeta{font-size:11.5px; color:var(--ink-3); font-family:ui-monospace,monospace}
+  input.cr{width:74px; font:inherit; font-size:12.5px; padding:4px 6px; border:1px solid var(--border);
+    border-radius:6px; background:var(--surface); color:var(--ink); text-align:right; font-variant-numeric:tabular-nums}
+  input.cr.edited{border-color:var(--teal); font-weight:600}
+  .note{font-size:12.5px; color:var(--ink-2); background:var(--surface); border-left:3px solid var(--teal);
+    padding:10px 14px; border-radius:0 8px 8px 0}
+  .est{color:var(--ink-3); cursor:help}
+  footer{font-size:12px; color:var(--ink-3); border-top:1px solid var(--border); padding-top:14px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Overchat · юнит-экономика</div>
+    <h1>Цены и маржа по виджетам</h1>
+    <div class="sub">Себестоимость генерации на fal против цены в кредитах — на любом тарифе.
+      Трафик, покупки и апгрейды берутся из того же <code>data/widgets_daily.json</code>, что и остальной дашборд,
+      так что отдельного крона не нужно. Цену в кредитах можно менять прямо в таблице — маржа пересчитается.</div>
+    <div class="stamp" id="stamp">загрузка…</div>
+    <div class="nav"><a href="index.html">← воронка по дням</a> · <a href="widgets.html">виджеты</a></div>
+  </header>
+
+  <div class="controls">
+    <span class="lbl">Период</span>
+    <input type="date" id="from"><input type="date" id="to">
+    <button class="btn" data-days="7">7д</button>
+    <button class="btn on" data-days="30">30д</button>
+    <button class="btn" data-days="90">Всё</button>
+    <span class="spacer"></span>
+    <span class="lbl">Тариф</span>
+    <select id="plan"></select>
+    <button class="btn" id="reset">Сбросить цены</button>
+  </div>
+
+  <div class="cards" id="kpis"></div>
+
+  <div class="card">
+    <h2>По виджетам</h2>
+    <div class="scroll"><table id="tbl">
+      <thead><tr>
+        <th>Виджет</th>
+        <th class="n">Цена, кр</th>
+        <th class="n">$/ген</th>
+        <th class="n">Маржа/ген</th>
+        <th class="n">Генераций</th>
+        <th class="n">Визиты</th>
+        <th class="n">Покупки</th>
+        <th class="n">Выручка</th>
+        <th class="n">Себест.</th>
+        <th class="n">Факт. маржа</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="note" id="hint"></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const F = { W:null, P:null, dates:[], i0:0, i1:0, plan:null, edits:{} };
+const LS = 'oc-price-edits-v1';
+try { F.edits = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch(e) { F.edits = {}; }
+const save = () => { try { localStorage.setItem(LS, JSON.stringify(F.edits)); } catch(e){} };
+const sum = (a,i0,i1) => { let s=0; if(!a) return 0; for(let i=i0;i<=i1;i++) s += (a[i]||0); return s; };
+const money = n => (n<0?'−':'') + '$' + Math.abs(n).toFixed(2);
+const pctCls = p => p==null ? '' : (p<0 ? 'bad' : (p<50 ? 'warn' : 'good'));
+
+async function boot(){
+  const [w,p] = await Promise.all([
+    fetch('data/widgets_daily.json').then(r=>r.json()),
+    fetch('data/pricing_static.json').then(r=>r.json())
+  ]);
+  F.W = w; F.P = p; F.dates = w.dates;
+  const sel = document.getElementById('plan');
+  sel.innerHTML = p.plans.map(pl =>
+    `<option value="${pl.code}">${pl.name} · ${pl.code} — $${pl.usd_per_credit.toFixed(6)}/кр</option>`).join('');
+  sel.value = 'pro_monthly';
+  F.plan = p.plans.find(x=>x.code==='pro_monthly') || p.plans[0];
+  document.getElementById('stamp').textContent =
+    `трафик и покупки: ${w.generated_at.slice(0,10)} · цены и себестоимость: ${p.generated_at} · окно ${w.dates[0]} — ${w.dates[w.dates.length-1]}`;
+  setDays(30); wire(); render();
+}
+function setDays(n){
+  const L = F.dates.length;
+  F.i1 = L-1; F.i0 = Math.max(0, L-n);
+  document.getElementById('from').value = F.dates[F.i0];
+  document.getElementById('to').value   = F.dates[F.i1];
+}
+function wire(){
+  document.querySelectorAll('.btn[data-days]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.btn[data-days]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); setDays(+b.dataset.days); render();
+  }));
+  ['from','to'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
+    const a=F.dates.indexOf(document.getElementById('from').value);
+    const b=F.dates.indexOf(document.getElementById('to').value);
+    if(a>=0) F.i0=a; if(b>=0) F.i1=b;
+    if(F.i0>F.i1){const t=F.i0;F.i0=F.i1;F.i1=t;}
+    document.querySelectorAll('.btn[data-days]').forEach(x=>x.classList.remove('on'));
+    render();
+  }));
+  document.getElementById('plan').addEventListener('change',e=>{
+    F.plan = F.P.plans.find(x=>x.code===e.target.value); render();
+  });
+  document.getElementById('reset').addEventListener('click',()=>{ F.edits={}; save(); render(); });
+}
+function priceOf(w,per){ const k=w.slug+'::'+per.id; return F.edits[k]!=null ? F.edits[k] : per.credits; }
+
+function rows(){
+  const days = F.i1 - F.i0 + 1;
+  const byKey = {}; (F.W.widgets||[]).forEach(x=>byKey[x.key]=x);
+  const out = [];
+  (F.P.widgets||[]).forEach(pw=>{
+    const dw = byKey[pw.slug];
+    const per = pw.personas.filter(x=>x.cost_usd).sort((a,b)=>b.cost_usd-a.cost_usd)[0];
+    if(!per) return;
+    // генерации: живой ряд g (после патча Code.gs) либо снимок августа, размазанный по дням
+    let gens, est=false;
+    if(dw && Array.isArray(dw.g)) gens = sum(dw.g,F.i0,F.i1);
+    else { gens = Math.round((pw.gen_events_aug||0)/30*days); est = true; }
+    const visits = dw ? sum(dw.v,F.i0,F.i1) : 0;
+    const ot = dw ? sum(dw.o,F.i0,F.i1) : 0;
+    const sub = dw ? sum(dw.s,F.i0,F.i1) : 0;
+    const cr = priceOf(pw,per);
+    const revPerGen = cr * F.plan.usd_per_credit;
+    const marginGen = revPerGen - per.cost_usd;
+    const pctGen = revPerGen>0 ? 100*marginGen/revPerGen : null;
+    const cost = gens * per.cost_usd;
+    const packRate = (F.P.plans.find(x=>x.code==='package-onetime')||{}).usd_per_credit;
+    const subPrice = (F.P.plans.find(x=>x.code==='pro_monthly')||{}).price || 14.99;
+    const revFact = ot*2.99 + sub*subPrice;
+    out.push({pw,per,cr,gens,est,visits,ot,sub,revPerGen,marginGen,pctGen,cost,revFact,
+      pctFact: revFact>0 ? 100*(revFact-cost)/revFact : null, packRate});
+  });
+  out.sort((a,b)=> (a.pctGen??999) - (b.pctGen??999));
+  return out;
+}
+function render(){
+  const R = rows(), tb = document.querySelector('#tbl tbody');
+  tb.innerHTML = R.map(r=>{
+    const k = r.pw.slug+'::'+r.per.id;
+    const ed = F.edits[k]!=null && F.edits[k]!==r.per.credits;
+    return `<tr>
+      <td><div class="wname">${r.pw.title||r.pw.slug}</div>
+          <div class="wmeta">${r.per.id} · $${r.per.cost_usd.toFixed(4)}/ген</div></td>
+      <td class="n"><input class="cr ${ed?'edited':''}" type="number" min="0" step="5"
+            value="${r.cr}" data-k="${k}" aria-label="цена в кредитах ${r.pw.slug}"></td>
+      <td class="n">${r.revPerGen.toFixed(4)}</td>
+      <td class="n ${pctCls(r.pctGen)}">${r.pctGen==null?'—':(r.pctGen>=0?'+':'')+r.pctGen.toFixed(0)+'%'}</td>
+      <td class="n">${r.gens.toLocaleString('ru')}${r.est?'<span class="est" title="нет ряда genreq — оценка по августу">°</span>':''}</td>
+      <td class="n">${r.visits.toLocaleString('ru')}</td>
+      <td class="n">${(r.ot+r.sub).toLocaleString('ru')} <span class="wmeta">${r.ot}р/${r.sub}п</span></td>
+      <td class="n">${money(r.revFact)}</td>
+      <td class="n">${money(r.cost)}</td>
+      <td class="n ${pctCls(r.pctFact)}">${r.pctFact==null?'—':(r.pctFact>=0?'+':'')+r.pctFact.toFixed(0)+'%'}</td>
+    </tr>`;
+  }).join('') + (()=> {
+    const t = R.reduce((a,r)=>({c:a.c+r.cost, v:a.v+r.revFact, g:a.g+r.gens,
+      vis:a.vis+r.visits, b:a.b+r.ot+r.sub}), {c:0,v:0,g:0,vis:0,b:0});
+    const p = t.v>0 ? 100*(t.v-t.c)/t.v : null;
+    return `<tr class="tot"><td>Итого (${R.length})</td><td></td><td></td><td></td>
+      <td class="n">${t.g.toLocaleString('ru')}</td><td class="n">${t.vis.toLocaleString('ru')}</td>
+      <td class="n">${t.b.toLocaleString('ru')}</td><td class="n">${money(t.v)}</td>
+      <td class="n">${money(t.c)}</td><td class="n ${pctCls(p)}">${p==null?'—':(p>=0?'+':'')+p.toFixed(0)+'%'}</td></tr>`;
+  })();
+  tb.querySelectorAll('input.cr').forEach(i=>i.addEventListener('input',e=>{
+    F.edits[e.target.dataset.k] = Math.max(0, Math.round(+e.target.value||0)); save(); render();
+  }));
+  const neg = R.filter(r=>r.pctGen!=null && r.pctGen<0).length;
+  const thin = R.filter(r=>r.pctGen!=null && r.pctGen>=0 && r.pctGen<50).length;
+  const tc = R.reduce((a,r)=>a+r.cost,0), tv = R.reduce((a,r)=>a+r.revFact,0);
+  const pack = R.length ? R[0].packRate : null;
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="k">Тариф</div><div class="v">$${F.plan.usd_per_credit.toFixed(6)}</div>
+      <div class="d">за кредит · ${F.plan.name} (${F.plan.renewal})</div></div>
+    <div class="kpi"><div class="k">Ниже нуля</div><div class="v ${neg?'bad':'good'}">${neg}</div>
+      <div class="d">из ${R.length} виджетов, маржа за генерацию</div></div>
+    <div class="kpi"><div class="k">Тонко (0–50%)</div><div class="v ${thin?'warn':'good'}">${thin}</div>
+      <div class="d">запас меньше половины выручки</div></div>
+    <div class="kpi"><div class="k">Факт за период</div><div class="v">${tv>0?(100*(tv-tc)/tv).toFixed(0)+'%':'—'}</div>
+      <div class="d">${money(tv)} выручки · ${money(tc)} себестоимости</div></div>`;
+  const anyEst = R.some(r=>r.est);
+  document.getElementById('hint').innerHTML =
+    `<b>Маржа/ген</b> — цена в кредитах × курс выбранного тарифа против себестоимости на fal: правильно ли назначена цена.
+     <b>Факт. маржа</b> — реальные покупки за период против реальной себестоимости: сколько виджет принёс на самом деле
+     (одноразка $2.99, подписка $${(F.P.plans.find(x=>x.code==='pro_monthly')||{}).price||14.99}).` +
+    (pack ? ` Для сравнения: кредит в Mini Pack стоит $${pack.toFixed(4)} — в ${(pack/F.plan.usd_per_credit).toFixed(0)} раз дороже текущего тарифа.` : '') +
+    (anyEst ? ` <span class="est">°</span> — у виджета нет ряда <code>genreq</code>, генерации оценены по августовскому снимку; после патча Code.gs станут живыми.` : '');
+  document.getElementById('foot').textContent =
+    `Трафик, покупки и апгрейды — data/widgets_daily.json (обновляет Apps Script ежедневно). ` +
+    `Цены в кредитах и себестоимость fal — data/pricing_static.json (обновляется вручную при смене моделей). ` +
+    `Правки цен хранятся в этом браузере.`;
+}
+boot().catch(e=>{ document.getElementById('stamp').textContent = 'ошибка загрузки: ' + e.message; });
+</script>
+</body>
+</html>
