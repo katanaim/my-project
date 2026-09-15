@@ -160,6 +160,12 @@
     <div id="trans"></div>
   </div>
 
+  <div class="panel" id="exp_p" hidden>
+    <h2 id="exp_title">Эксперименты</h2>
+    <div class="hint" id="exp_hint"></div>
+    <div id="exp"></div>
+  </div>
+
   <div class="foot" id="foot" hidden>
     <b>Методология.</b> Все числа — дневные уники юзеров, суммированные за выбранный период (вернувшийся в другой день юзер считается снова).
     <b>Рега</b> = юзеры, зарегавшиеся в течение 24ч после показа рега-стены (Google/Apple-реги фаерятся на URL OAuth-колбэка, поэтому по стене).
@@ -435,6 +441,18 @@ function render(){
       ${rows.map(x=>`<tr><td>${CH[x.ch]||x.ch}</td><td class="num">${fmt(x.u)}</td><td class="num muted">${pcs(x.u,tot,0)}</td><td class="num">${x.bu}</td><td class="num"><b>${pcs(x.bu,x.u,2)}</b></td></tr>`).join("")}
       </table></div>`+cmp;
     $("src_p").hidden=false;
+  }
+  if(DATA.experiments){
+    const ex=DATA.experiments, exs=ex.series;
+    const ev=k=>sum(exs[k],a,b);
+    const rows=ex.items.map(([k,label])=>[label,ev(k)]);
+    const emx=Math.max(...rows.map(r=>r[1]),1);
+    $("exp").innerHTML=rows.map(([label,u],i)=>{
+      const prev=i>0?rows[i-1][1]:null;
+      return frow(label,u,pcs(u,rows[0][1],0),i>0?pcs(u,prev,0):"—",Math.max(1,u/emx*100),"amber");
+    }).join("");
+    $("exp_hint").textContent=ex.hint+(from<ex.launched?` · ⚠️ запущено ${ex.launched.slice(5).split("-").reverse().join(".")} — раньше нули не по вине юзеров`:"");
+    $("exp_p").hidden=false;
   }
   if(DATA.trans){
     const rows=DATA.trans.map(t=>({t,u:sum(V(t.u),a,b),btot:sum(V(t.bt_ot),a,b),btsub:sum(V(t.bt_sub),a,b),
