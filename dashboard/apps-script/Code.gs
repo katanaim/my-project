@@ -427,6 +427,27 @@ function widgetsOthersSql_(mapLo, mapHi, lo, hi) {
 "WHERE e.event_name='page_view' AND e.lslug != '~' AND m.l IS NULL\n" +
 "GROUP BY 1,2 HAVING v >= 5";
 }
+function widgetsGenSql_(mapLo, mapHi, lo, hi) {
+  return "WITH " + excludedCte_(mapLo, mapHi) + ",\n" + widgetsMapCte_() +
+", gbase AS (SELECT user_pseudo_id,\n" +
+"    CAST(DATE(TIMESTAMP_MICROS(event_timestamp)) AS STRING) AS d,\n" +
+"    COALESCE(REGEXP_EXTRACT((SELECT value.string_value FROM UNNEST(event_params) WHERE key='page_location'),\n" +
+"      r'overchat[.]ai/web/((?:image-generator|video-generator|ai-video-generator|ai-image-model)/[^/?#]+|[^/?#]+)'),'~') AS pslug\n" +
+"  FROM `" + CFG.BQ_PROJECT + ".analytics_469242162.events_*`\n" +
+"  WHERE _TABLE_SUFFIX BETWEEN '" + lo + "' AND '" + hi + "'\n" +
+"    AND event_name='overchat'\n" +
+"    AND EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='eventAction' AND value.string_value='request')\n" +
+"    AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded_users)\n" +
+"    AND IFNULL(device.web_info.hostname,'') NOT IN ('stage.overchat.ai','widget.overchat.ai')\n" +
+"    AND NOT EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key='test_user'))\n" +
+", g2 AS (SELECT *, REGEXP_EXTRACT(pslug, r'^([^/]+)') AS pfam FROM gbase)\n" +
+"SELECT COALESCE(pm.w, pf.w) AS wkey, g2.d, COUNT(*) AS g,\n" +
+"       COUNT(DISTINCT g2.user_pseudo_id) AS gu\n" +
+"FROM g2 LEFT JOIN pmap pm ON g2.pslug = pm.p\n" +
+"        LEFT JOIN pmap pf ON pm.p IS NULL AND g2.pfam = pf.p\n" +
+"WHERE COALESCE(pm.w, pf.w) IS NOT NULL\n" +
+"GROUP BY 1,2";
+}
 function buildWidgetsDaily_() {
   var stamp = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
   var mature = addDays_(new Date(), -CFG.BUFFER_DAYS);
@@ -446,7 +467,8 @@ function buildWidgetsDaily_() {
   var W = {};
   WIDGET_DEFS.forEach(function (def) {   // все виджеты карты присутствуют всегда, даже с нулями
     W[def.k] = { key: def.k, name: def.n, landings: def.l.slice(),
-      v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros(), w: zeros() };
+      v: zeros(), b: zeros(), o: zeros(), s: zeros(), c: zeros(), u: zeros(), w: zeros(),
+      g: zeros(), gu: zeros() };
   });
 
   bqQuery_(widgetsDailySql_(mapLo, mapHi, lo, hi)).forEach(function (r) {
@@ -458,6 +480,11 @@ function buildWidgetsDaily_() {
     if (!W[r.wkey]) return;
     var i = di[r.d]; if (i == null) return;
     W[r.wkey].c[i] = r.c; W[r.wkey].u[i] = r.u; W[r.wkey].w[i] = r.w;
+  });
+  bqQuery_(widgetsGenSql_(mapLo, mapHi, lo, hi)).forEach(function (r) {   // генерации: g = событий, gu = юзеров
+    var x = W[r.wkey]; if (!x) return;
+    var i = di[r.d]; if (i == null) return;
+    x.g[i] = r.g; x.gu[i] = r.gu;
   });
   var O = {};
   bqQuery_(widgetsOthersSql_(mapLo, mapHi, lo, hi)).forEach(function (r) {
@@ -471,7 +498,9 @@ function buildWidgetsDaily_() {
     others: Object.keys(O).map(function (k) { return { slug: k, v: O[k] }; }) };
   var ex = ghGetJson_('dashboard/data/widgets_daily.json');
   ghPutFile_('dashboard/data/widgets_daily.json', JSON.stringify(out), 'data: widgets daily refresh', ex && ex.sha);
-  Logger.log('widgets daily: %s виджетов, %s прочих, %s дней', out.widgets.length, out.others.length, dates.length);
+  Logger.log('widgets daily: %s виджетов, %s прочих, %s дней, генераций за окно: %s',
+  out.widgets.length, out.others.length, dates.length,
+  out.widgets.reduce(function(a,x){ return a + x.g.reduce(function(p,q){return p+q;},0); }, 0));
 }
 
 // ---------------------------------------------------------------------------

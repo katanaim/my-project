@@ -1,0 +1,1431 @@
+{
+ "generated_at": "2026-09-01",
+ "source": "fal model catalog + model pages; /v1/billing/plans; /v1/billing/credit-packages; /v1/personas",
+ "note": "Статика: цена в кредитах и себестоимость fal на генерацию. Обновлять при смене моделей или цен.",
+ "plans": [
+  {
+   "code": "pro_yearly",
+   "name": "Pro",
+   "price": 59.99,
+   "takos": 8000,
+   "renewal": "yearly",
+   "usd_per_credit": 0.000624896
+  },
+  {
+   "code": "pro_weekly_trial",
+   "name": "Pro",
+   "price": 0.99,
+   "takos": 1000,
+   "renewal": "weekly",
+   "usd_per_credit": 0.00099
+  },
+  {
+   "code": "pro_monthly",
+   "name": "Pro",
+   "price": 14.99,
+   "takos": 8000,
+   "renewal": "monthly",
+   "usd_per_credit": 0.00187375
+  },
+  {
+   "code": "package-professional",
+   "name": "Professional Pack",
+   "price": 99.99,
+   "takos": 50000,
+   "renewal": "one-time",
+   "usd_per_credit": 0.0019998
+  },
+  {
+   "code": "package-studio",
+   "name": "Studio Pack",
+   "price": 24.99,
+   "takos": 11000,
+   "renewal": "one-time",
+   "usd_per_credit": 0.002271818
+  },
+  {
+   "code": "over_yearly",
+   "name": "Over",
+   "price": 228.0,
+   "takos": 8000,
+   "renewal": "yearly",
+   "usd_per_credit": 0.002375
+  },
+  {
+   "code": "package-creator",
+   "name": "Creator Pack",
+   "price": 9.99,
+   "takos": 4000,
+   "renewal": "one-time",
+   "usd_per_credit": 0.0024975
+  },
+  {
+   "code": "pro_weekly",
+   "name": "Pro",
+   "price": 5.99,
+   "takos": 2000,
+   "renewal": "weekly",
+   "usd_per_credit": 0.002995
+  },
+  {
+   "code": "plus_yearly",
+   "name": "Plus",
+   "price": 84.0,
+   "takos": 2000,
+   "renewal": "yearly",
+   "usd_per_credit": 0.0035
+  },
+  {
+   "code": "over",
+   "name": "Over",
+   "price": 29.0,
+   "takos": 8000,
+   "renewal": "monthly",
+   "usd_per_credit": 0.003625
+  },
+  {
+   "code": "package-starter",
+   "name": "Starter Pack",
+   "price": 1.99,
+   "takos": 500,
+   "renewal": "one-time",
+   "usd_per_credit": 0.00398
+  },
+  {
+   "code": "plus",
+   "name": "Plus",
+   "price": 9.0,
+   "takos": 2000,
+   "renewal": "monthly",
+   "usd_per_credit": 0.0045
+  },
+  {
+   "code": "package-onetime",
+   "name": "Mini Pack",
+   "price": 2.99,
+   "takos": 100,
+   "renewal": "one-time",
+   "usd_per_credit": 0.0299
+  }
+ ],
+ "widgets": [
+  {
+   "slug": "ai-add-person-to-photo",
+   "title": "Add Person to Photo",
+   "personas": [
+    {
+     "id": "add-person-to-photo",
+     "type": "image",
+     "credits": 25,
+     "cost_usd": 0.04,
+     "endpoint": "fal-ai/bytedance/seedream/v4.5/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 1365,
+   "channels": {
+    "paid": {
+     "visits": 4451,
+     "buyers": 507
+    },
+    "organic": {
+     "visits": 2443,
+     "buyers": 62
+    },
+    "direct": {
+     "visits": 339,
+     "buyers": 16
+    },
+    "referral": {
+     "visits": 106,
+     "buyers": 9
+    },
+    "other": {
+     "visits": 66,
+     "buyers": 7
+    },
+    "ai": {
+     "visits": 12,
+     "buyers": 1
+    }
+   },
+   "paid_share": 60.0,
+   "organic_share": 32.9
+  },
+  {
+   "slug": "ai-attractiveness-test",
+   "title": "AI Attractiveness Test",
+   "personas": [
+    {
+     "id": "ai-attractiveness-test",
+     "type": "image",
+     "credits": 300,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 70,
+   "channels": {
+    "organic": {
+     "visits": 2266,
+     "buyers": 21
+    },
+    "paid": {
+     "visits": 437,
+     "buyers": 22
+    },
+    "direct": {
+     "visits": 285,
+     "buyers": 15
+    },
+    "referral": {
+     "visits": 31,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 3,
+     "buyers": 2
+    },
+    "other": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 14.5,
+   "organic_share": 74.9
+  },
+  {
+   "slug": "ai-baby-face-generator",
+   "title": "AI Baby Generator",
+   "personas": [
+    {
+     "id": "baby-generator",
+     "type": "image",
+     "credits": 100,
+     "cost_usd": 0.08,
+     "endpoint": "fal-ai/nano-banana-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 615,
+   "channels": {
+    "paid": {
+     "visits": 11644,
+     "buyers": 472
+    },
+    "organic": {
+     "visits": 3954,
+     "buyers": 46
+    },
+    "direct": {
+     "visits": 423,
+     "buyers": 15
+    },
+    "other": {
+     "visits": 168,
+     "buyers": 7
+    },
+    "referral": {
+     "visits": 29,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 7,
+     "buyers": 1
+    }
+   },
+   "paid_share": 71.8,
+   "organic_share": 24.4
+  },
+  {
+   "slug": "ai-cartoonizer",
+   "title": "AI Cartoonizer",
+   "personas": [
+    {
+     "id": "ai-cartoonizer",
+     "type": "image",
+     "credits": 200,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 0,
+   "channels": {
+    "paid": {
+     "visits": 236,
+     "buyers": 4
+    },
+    "organic": {
+     "visits": 41,
+     "buyers": 0
+    },
+    "direct": {
+     "visits": 21,
+     "buyers": 2
+    },
+    "other": {
+     "visits": 7,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 1,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 76.9,
+   "organic_share": 13.4
+  },
+  {
+   "slug": "ai-couple-photo-maker",
+   "title": "AI Couple Photo Maker",
+   "personas": [
+    {
+     "id": "ai-couple-photo-maker",
+     "type": "image",
+     "credits": 25,
+     "cost_usd": 0.0675,
+     "endpoint": "bytedance/seedream/v5/pro/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 26
+  },
+  {
+   "slug": "ai-dance-generator",
+   "title": "AI Dance Generator",
+   "personas": [
+    {
+     "id": "ai-dance-generator",
+     "type": "video",
+     "credits": 1000,
+     "cost_usd": null,
+     "endpoint": "fal-ai/kling-video/v3/pro/motion-control",
+     "note": "no fal price"
+    }
+   ],
+   "gen_events_aug": 212,
+   "channels": {
+    "organic": {
+     "visits": 1902,
+     "buyers": 23
+    },
+    "paid": {
+     "visits": 1606,
+     "buyers": 50
+    },
+    "direct": {
+     "visits": 191,
+     "buyers": 6
+    },
+    "referral": {
+     "visits": 40,
+     "buyers": 1
+    },
+    "other": {
+     "visits": 27,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 12,
+     "buyers": 0
+    }
+   },
+   "paid_share": 42.5,
+   "organic_share": 50.3
+  },
+  {
+   "slug": "ai-face-shape-detector",
+   "title": "AI Face Shape Detector",
+   "personas": [
+    {
+     "id": "ai-face-shape-detector",
+     "type": "image",
+     "credits": 250,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    },
+    {
+     "id": "ai-face-shape-detector-chat",
+     "type": "image",
+     "credits": 10,
+     "cost_usd": null,
+     "endpoint": "",
+     "note": "non-fal (openrouter)"
+    }
+   ],
+   "gen_events_aug": 10,
+   "channels": {
+    "paid": {
+     "visits": 808,
+     "buyers": 3
+    },
+    "organic": {
+     "visits": 146,
+     "buyers": 1
+    },
+    "direct": {
+     "visits": 18,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 14,
+     "buyers": 0
+    },
+    "other": {
+     "visits": 9,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 81.0,
+   "organic_share": 14.6
+  },
+  {
+   "slug": "ai-face-swap-video",
+   "title": "AI Face Swap Video",
+   "personas": [
+    {
+     "id": "ai-face-swap-video",
+     "type": "video",
+     "credits": 760,
+     "cost_usd": 0.8400000000000001,
+     "endpoint": "fal-ai/kling-video/o3/pro/video-to-video/reference",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 347,
+   "channels": {
+    "organic": {
+     "visits": 18140,
+     "buyers": 85
+    },
+    "direct": {
+     "visits": 1559,
+     "buyers": 9
+    },
+    "referral": {
+     "visits": 88,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 8,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 7,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 91.6
+  },
+  {
+   "slug": "ai-family-photo-generator",
+   "title": "AI Family Photo Generator",
+   "personas": [
+    {
+     "id": "ai-family-photo-generator",
+     "type": "image",
+     "credits": 75,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 13,
+   "channels": {
+    "organic": {
+     "visits": 231,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 46,
+     "buyers": 1
+    },
+    "direct": {
+     "visits": 18,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 5,
+     "buyers": 0
+    },
+    "other": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 15.3,
+   "organic_share": 76.7
+  },
+  {
+   "slug": "ai-girl-generator",
+   "title": "AI Girl Generator",
+   "personas": [
+    {
+     "id": "ai-girl-generator",
+     "type": "image",
+     "credits": 100,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 0,
+   "channels": {
+    "organic": {
+     "visits": 136,
+     "buyers": 0
+    },
+    "direct": {
+     "visits": 22,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 7,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.6,
+   "organic_share": 81.4
+  },
+  {
+   "slug": "ai-gta-trend",
+   "title": "GTA Trend",
+   "personas": [
+    {
+     "id": "gta-trend",
+     "type": "image",
+     "credits": 200,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 6,
+   "channels": {
+    "organic": {
+     "visits": 202,
+     "buyers": 2
+    },
+    "direct": {
+     "visits": 30,
+     "buyers": 1
+    },
+    "ai": {
+     "visits": 3,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 85.2
+  },
+  {
+   "slug": "ai-hair-color-changer",
+   "title": "AI Hair Color Changer",
+   "personas": [
+    {
+     "id": "ai-hair-color-changer",
+     "type": "image",
+     "credits": 100,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 11,
+   "channels": {
+    "organic": {
+     "visits": 374,
+     "buyers": 0
+    },
+    "direct": {
+     "visits": 62,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 5,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.2,
+   "organic_share": 84.6
+  },
+  {
+   "slug": "ai-handwriting-check",
+   "title": "AI Handwriting Check",
+   "personas": [
+    {
+     "id": "ai-handwriting-check",
+     "type": "image",
+     "credits": 200,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 9,
+   "channels": {
+    "organic": {
+     "visits": 367,
+     "buyers": 10
+    },
+    "direct": {
+     "visits": 33,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 91.3
+  },
+  {
+   "slug": "ai-hug-generator",
+   "title": "AI Hug Generator",
+   "personas": [
+    {
+     "id": "AI-Hug-Generator",
+     "type": "video",
+     "credits": 400,
+     "cost_usd": 0.4,
+     "endpoint": "xai/grok-imagine-video/reference-to-video",
+     "note": ""
+    },
+    {
+     "id": "AI-Hug-Generator-image",
+     "type": "image",
+     "credits": 25,
+     "cost_usd": 0.04,
+     "endpoint": "fal-ai/bytedance/seedream/v4.5/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 198,
+   "channels": {
+    "organic": {
+     "visits": 33,
+     "buyers": 5
+    },
+    "direct": {
+     "visits": 21,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 1,
+     "buyers": 3
+    },
+    "referral": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 1.8,
+   "organic_share": 58.9
+  },
+  {
+   "slug": "ai-image-combiner",
+   "title": "AI Image Combiner",
+   "personas": [
+    {
+     "id": "combine-images",
+     "type": "image",
+     "credits": 30,
+     "cost_usd": 0.04,
+     "endpoint": "fal-ai/bytedance/seedream/v4.5/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 9660,
+   "channels": {
+    "organic": {
+     "visits": 11377,
+     "buyers": 112
+    },
+    "paid": {
+     "visits": 3528,
+     "buyers": 239
+    },
+    "direct": {
+     "visits": 970,
+     "buyers": 27
+    },
+    "referral": {
+     "visits": 322,
+     "buyers": 2
+    },
+    "other": {
+     "visits": 35,
+     "buyers": 3
+    },
+    "ai": {
+     "visits": 6,
+     "buyers": 0
+    }
+   },
+   "paid_share": 21.7,
+   "organic_share": 70.1
+  },
+  {
+   "slug": "ai-kissing-generator",
+   "title": "AI Kissing Generator",
+   "personas": [
+    {
+     "id": "ai-kissing-image",
+     "type": "image",
+     "credits": 45,
+     "cost_usd": 0.04,
+     "endpoint": "fal-ai/bytedance/seedream/v4.5/edit",
+     "note": ""
+    },
+    {
+     "id": "ai-kissing-video",
+     "type": "video",
+     "credits": 600,
+     "cost_usd": 0.4,
+     "endpoint": "xai/grok-imagine-video/reference-to-video",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 2687,
+   "channels": {
+    "organic": {
+     "visits": 13371,
+     "buyers": 124
+    },
+    "paid": {
+     "visits": 4846,
+     "buyers": 519
+    },
+    "direct": {
+     "visits": 1162,
+     "buyers": 55
+    },
+    "referral": {
+     "visits": 241,
+     "buyers": 1
+    },
+    "other": {
+     "visits": 66,
+     "buyers": 11
+    },
+    "ai": {
+     "visits": 16,
+     "buyers": 1
+    }
+   },
+   "paid_share": 24.6,
+   "organic_share": 67.9
+  },
+  {
+   "slug": "ai-music-video-generator",
+   "title": "AI Music Video Generator",
+   "personas": [
+    {
+     "id": "ai-music-video-generator",
+     "type": "video",
+     "credits": 4000,
+     "cost_usd": null,
+     "endpoint": "fal-ai/bytedance/omnihuman/v1.5",
+     "note": "no fal price"
+    },
+    {
+     "id": "ai-music-video-singer",
+     "type": "image",
+     "credits": 4000,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro/edit",
+     "note": ""
+    },
+    {
+     "id": "ai-music-video-singer-t2i",
+     "type": "image",
+     "credits": 4000,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 9
+  },
+  {
+   "slug": "ai-oc-generator",
+   "title": "AI OC Generator",
+   "personas": [
+    {
+     "id": "ai-oc-generator",
+     "type": "image",
+     "credits": 200,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 0
+  },
+  {
+   "slug": "ai-palm-reading",
+   "title": "AI Palm Reading",
+   "personas": [
+    {
+     "id": "ai-palm-reading",
+     "type": "image",
+     "credits": 200,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 35,
+   "channels": {
+    "organic": {
+     "visits": 1358,
+     "buyers": 4
+    },
+    "paid": {
+     "visits": 333,
+     "buyers": 22
+    },
+    "direct": {
+     "visits": 278,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 22,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 6,
+     "buyers": 0
+    },
+    "other": {
+     "visits": 5,
+     "buyers": 2
+    }
+   },
+   "paid_share": 16.6,
+   "organic_share": 67.8
+  },
+  {
+   "slug": "ai-passport-photo",
+   "title": "AI Passport Photo",
+   "personas": [
+    {
+     "id": "ai-passport-photo-tti",
+     "type": "image",
+     "credits": 100,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 1623,
+   "channels": {
+    "organic": {
+     "visits": 2656,
+     "buyers": 7
+    },
+    "paid": {
+     "visits": 1573,
+     "buyers": 79
+    },
+    "direct": {
+     "visits": 149,
+     "buyers": 2
+    },
+    "referral": {
+     "visits": 58,
+     "buyers": 1
+    },
+    "other": {
+     "visits": 19,
+     "buyers": 1
+    },
+    "ai": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 35.3,
+   "organic_share": 59.6
+  },
+  {
+   "slug": "ai-pet-baby-generator",
+   "title": "AI Pet Baby Generator",
+   "personas": [
+    {
+     "id": "ai-pet-baby-generator",
+     "type": "image",
+     "credits": 100,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 36
+  },
+  {
+   "slug": "ai-pet-portrait-generator",
+   "title": "AI Pet Portrait",
+   "personas": [
+    {
+     "id": "ai-pet-portrait",
+     "type": "image",
+     "credits": 15,
+     "cost_usd": 0.022,
+     "endpoint": "xai/grok-imagine-image/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 0,
+   "channels": {
+    "paid": {
+     "visits": 8,
+     "buyers": 0
+    },
+    "organic": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 88.9,
+   "organic_share": 11.1
+  },
+  {
+   "slug": "ai-rate-my-face",
+   "title": "AI Face Rater",
+   "personas": [
+    {
+     "id": "ai-face-rater-scan",
+     "type": "image",
+     "credits": 50,
+     "cost_usd": null,
+     "endpoint": "",
+     "note": "non-fal (openai)"
+    },
+    {
+     "id": "ai-face-rater-tti",
+     "type": "image",
+     "credits": 300,
+     "cost_usd": 0.08,
+     "endpoint": "fal-ai/nano-banana-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 367,
+   "channels": {
+    "organic": {
+     "visits": 56504,
+     "buyers": 390
+    },
+    "paid": {
+     "visits": 32501,
+     "buyers": 1011
+    },
+    "direct": {
+     "visits": 7035,
+     "buyers": 89
+    },
+    "referral": {
+     "visits": 855,
+     "buyers": 7
+    },
+    "other": {
+     "visits": 295,
+     "buyers": 7
+    },
+    "ai": {
+     "visits": 23,
+     "buyers": 3
+    }
+   },
+   "paid_share": 33.4,
+   "organic_share": 58.1
+  },
+  {
+   "slug": "ai-selfie-generator",
+   "title": "AI Selfie Generator",
+   "personas": [
+    {
+     "id": "ai-selfie-generator",
+     "type": "image",
+     "credits": 165,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 21,
+   "channels": {
+    "organic": {
+     "visits": 222,
+     "buyers": 0
+    },
+    "direct": {
+     "visits": 41,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 3,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 1,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.4,
+   "organic_share": 82.8
+  },
+  {
+   "slug": "ai-sims-2-trend",
+   "title": "Sims 2 Trend",
+   "personas": [
+    {
+     "id": "sims-trend",
+     "type": "image",
+     "credits": 250,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 3,
+   "channels": {
+    "organic": {
+     "visits": 358,
+     "buyers": 2
+    },
+    "direct": {
+     "visits": 30,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 3,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 91.1
+  },
+  {
+   "slug": "ai-skin-analyzer",
+   "title": "AI Skin Analyzer",
+   "personas": [
+    {
+     "id": "ai-skin-advisor-chat",
+     "type": "image",
+     "credits": 10,
+     "cost_usd": null,
+     "endpoint": "",
+     "note": "non-fal (openrouter)"
+    },
+    {
+     "id": "ai-skin-analyzer-tti",
+     "type": "image",
+     "credits": 350,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 4,
+   "channels": {
+    "organic": {
+     "visits": 32,
+     "buyers": 0
+    },
+    "direct": {
+     "visits": 8,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 1,
+     "buyers": 1
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 76.2
+  },
+  {
+   "slug": "ai-smile-generator",
+   "title": "AI Smile Generator",
+   "personas": [
+    {
+     "id": "smile-generator",
+     "type": "image",
+     "credits": 15,
+     "cost_usd": 0.022,
+     "endpoint": "xai/grok-imagine-image/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 8,
+   "channels": {
+    "organic": {
+     "visits": 206,
+     "buyers": 0
+    },
+    "direct": {
+     "visits": 32,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 16,
+     "buyers": 1
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    },
+    "other": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 6.2,
+   "organic_share": 80.5
+  },
+  {
+   "slug": "ai-soulmate",
+   "title": "AI Soulmate",
+   "personas": [
+    {
+     "id": "ai-soulmate",
+     "type": "image",
+     "credits": 15,
+     "cost_usd": 0.022,
+     "endpoint": "xai/grok-imagine-image/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 18,
+   "channels": {
+    "organic": {
+     "visits": 1160,
+     "buyers": 2
+    },
+    "direct": {
+     "visits": 268,
+     "buyers": 6
+    },
+    "referral": {
+     "visits": 11,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 3,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 2,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.1,
+   "organic_share": 80.3
+  },
+  {
+   "slug": "ai-stadium-trend",
+   "title": "AI Stadium Video",
+   "personas": [
+    {
+     "id": "ai-stadium-trend",
+     "type": "video",
+     "credits": 2000,
+     "cost_usd": null,
+     "endpoint": null,
+     "note": "fal workflow"
+    }
+   ],
+   "gen_events_aug": 3,
+   "channels": {
+    "organic": {
+     "visits": 144,
+     "buyers": 1
+    },
+    "direct": {
+     "visits": 19,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 3,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 86.2
+  },
+  {
+   "slug": "ai-style-analysis",
+   "title": "AI Style Analysis",
+   "personas": [
+    {
+     "id": "ai-style-analysis",
+     "type": "image",
+     "credits": 25,
+     "cost_usd": 0.211,
+     "endpoint": "openai/gpt-image-2/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 56,
+   "channels": {
+    "paid": {
+     "visits": 597,
+     "buyers": 22
+    },
+    "organic": {
+     "visits": 163,
+     "buyers": 4
+    },
+    "direct": {
+     "visits": 36,
+     "buyers": 1
+    },
+    "other": {
+     "visits": 7,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 3,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 74.0,
+   "organic_share": 20.2
+  },
+  {
+   "slug": "ai-video-extender",
+   "title": "AI Video Extender",
+   "personas": [
+    {
+     "id": "ai-video-extender",
+     "type": "video",
+     "credits": 500,
+     "cost_usd": 0.08,
+     "endpoint": "xai/grok-imagine-video/extend-video",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 140,
+   "channels": {
+    "organic": {
+     "visits": 2245,
+     "buyers": 22
+    },
+    "direct": {
+     "visits": 286,
+     "buyers": 6
+    },
+    "ai": {
+     "visits": 85,
+     "buyers": 1
+    },
+    "referral": {
+     "visits": 80,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 3,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.1,
+   "organic_share": 83.2
+  },
+  {
+   "slug": "aspect-ratio-changer",
+   "title": "Aspect Ratio Changer",
+   "personas": [
+    {
+     "id": "aspect-ratio-changer",
+     "type": "image",
+     "credits": 40,
+     "cost_usd": 0.035,
+     "endpoint": "bytedance/seedream/v5/lite/edit",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 165,
+   "channels": {
+    "organic": {
+     "visits": 2384,
+     "buyers": 3
+    },
+    "direct": {
+     "visits": 128,
+     "buyers": 1
+    },
+    "referral": {
+     "visits": 103,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 1,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.0,
+   "organic_share": 91.1
+  },
+  {
+   "slug": "change-text-in-image",
+   "title": "Change Text in Image",
+   "personas": [
+    {
+     "id": "change-text-in-image",
+     "type": "image",
+     "credits": 150,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 0
+  },
+  {
+   "slug": "looksmax",
+   "title": "Looksmax Face Scan",
+   "personas": [
+    {
+     "id": "gemini-pro-looksmax-app",
+     "type": "image",
+     "credits": 50,
+     "cost_usd": null,
+     "endpoint": "",
+     "note": "non-fal (openrouter)"
+    },
+    {
+     "id": "looksmax-after",
+     "type": "image",
+     "credits": 160,
+     "cost_usd": 0.15,
+     "endpoint": "fal-ai/nano-banana-pro",
+     "note": ""
+    }
+   ],
+   "gen_events_aug": 0,
+   "channels": {
+    "organic": {
+     "visits": 17891,
+     "buyers": 267
+    },
+    "paid": {
+     "visits": 2071,
+     "buyers": 128
+    },
+    "direct": {
+     "visits": 2013,
+     "buyers": 69
+    },
+    "referral": {
+     "visits": 479,
+     "buyers": 5
+    },
+    "other": {
+     "visits": 12,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 7,
+     "buyers": 0
+    }
+   },
+   "paid_share": 9.2,
+   "organic_share": 79.6
+  },
+  {
+   "slug": "multiple-angles",
+   "title": "Multiple Angles",
+   "personas": [
+    {
+     "id": "multiple-angles-widget",
+     "type": "image",
+     "credits": 40,
+     "cost_usd": null,
+     "endpoint": "fal-ai/qwen-image-edit-2509-lora-gallery/multiple-angles",
+     "note": "no fal price"
+    }
+   ],
+   "gen_events_aug": 0,
+   "channels": {
+    "organic": {
+     "visits": 610,
+     "buyers": 2
+    },
+    "direct": {
+     "visits": 75,
+     "buyers": 0
+    },
+    "referral": {
+     "visits": 41,
+     "buyers": 0
+    },
+    "ai": {
+     "visits": 5,
+     "buyers": 0
+    },
+    "paid": {
+     "visits": 1,
+     "buyers": 0
+    }
+   },
+   "paid_share": 0.1,
+   "organic_share": 83.3
+  }
+ ],
+ "channels_note": "Снимок за 01–30.08.2026, first-touch traffic_source.medium. Статика: обновлять вместе с ценами."
+}
